@@ -5,6 +5,7 @@ namespace Server
         public FrmServer()
         {
             InitializeComponent();
+            this.Icon = Properties.Resources.server_icon;
         }
     }
 }
