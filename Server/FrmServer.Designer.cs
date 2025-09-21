@@ -1,4 +1,4 @@
-﻿namespace Server
+﻿namespace ServerApp
 {
     partial class FrmServer
     {
@@ -30,7 +30,7 @@
         {
             lblNaslov = new Label();
             pbServer = new PictureBox();
-            button1 = new Button();
+            btnToggle = new Button();
             label1 = new Label();
             lblBrojKlijenata = new Label();
             label2 = new Label();
@@ -59,18 +59,19 @@
             pbServer.TabIndex = 1;
             pbServer.TabStop = false;
             // 
-            // button1
+            // btnToggle
             // 
-            button1.BackColor = Color.Gainsboro;
-            button1.Cursor = Cursors.Hand;
-            button1.FlatStyle = FlatStyle.Flat;
-            button1.Font = new Font("Segoe UI", 12F, FontStyle.Regular, GraphicsUnit.Point);
-            button1.Location = new Point(316, 391);
-            button1.Name = "button1";
-            button1.Size = new Size(136, 33);
-            button1.TabIndex = 2;
-            button1.Text = "Pokreni server";
-            button1.UseVisualStyleBackColor = false;
+            btnToggle.BackColor = Color.Gainsboro;
+            btnToggle.Cursor = Cursors.Hand;
+            btnToggle.FlatStyle = FlatStyle.Flat;
+            btnToggle.Font = new Font("Segoe UI", 12F, FontStyle.Regular, GraphicsUnit.Point);
+            btnToggle.Location = new Point(316, 391);
+            btnToggle.Name = "btnToggle";
+            btnToggle.Size = new Size(136, 33);
+            btnToggle.TabIndex = 2;
+            btnToggle.Text = "Pokreni server";
+            btnToggle.UseVisualStyleBackColor = false;
+            btnToggle.Click += btnToggle_Click;
             // 
             // label1
             // 
@@ -122,12 +123,13 @@
             Controls.Add(label2);
             Controls.Add(lblBrojKlijenata);
             Controls.Add(label1);
-            Controls.Add(button1);
+            Controls.Add(btnToggle);
             Controls.Add(pbServer);
             Controls.Add(lblNaslov);
             FormBorderStyle = FormBorderStyle.FixedSingle;
             Name = "FrmServer";
             Text = "Server";
+            FormClosed += FrmServer_FormClosed;
             ((System.ComponentModel.ISupportInitialize)pbServer).EndInit();
             ResumeLayout(false);
             PerformLayout();
@@ -137,7 +139,7 @@
 
         private Label lblNaslov;
         private PictureBox pbServer;
-        private Button button1;
+        private Button btnToggle;
         private Label label1;
         private Label lblBrojKlijenata;
         private Label label2;
