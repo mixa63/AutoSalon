@@ -11,7 +11,7 @@ namespace Common.Communication
     /// <summary>
     /// Omogućava serijalizaciju i deserializaciju objekata u JSON formatu preko mrežnog soketa.
     /// </summary>
-    internal class JsonNetworkSerializer
+    public class JsonNetworkSerializer
     {
         private readonly Socket s;
         private NetworkStream stream;
