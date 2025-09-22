@@ -1,8 +1,8 @@
 namespace Client
 {
-    public partial class FrmClient : Form
+    public partial class FrmMain : Form
     {
-        public FrmClient()
+        public FrmMain()
         {
             InitializeComponent();
         }
