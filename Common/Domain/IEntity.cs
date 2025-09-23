@@ -1,6 +1,7 @@
 ﻿using Microsoft.Data.SqlClient;
 using System;
 using System.Collections.Generic;
+using System.Data.Common;
 
 namespace Common.Domain
 {
@@ -59,11 +60,11 @@ namespace Common.Domain
         List<SqlParameter> GetPrimaryKeyParameters();
 
         /// <summary>
-        /// Mapira rezultate iz <see cref="SqlDataReader"/> u listu entiteta.
+        /// Mapira rezultate iz <see cref="DbDataReader"/> u listu entiteta.
         /// </summary>
-        /// <param name="reader">Objekat <see cref="SqlDataReader"/> sa podacima iz baze.</param>
+        /// <param name="reader">Objekat <see cref="DbDataReader"/> sa podacima iz baze.</param>
         /// <returns>Lista <c>IEntity</c> objekata popunjenih iz baze.</returns>
-        List<IEntity> ReadEntities(SqlDataReader reader);
+        List<IEntity> ReadEntities(DbDataReader reader);
 
         /// <summary>
         /// Generički metod koji kreira SQL <c>WHERE</c> uslov sa pripadajućim parametrima.
