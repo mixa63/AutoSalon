@@ -2,6 +2,6 @@
   "AppConfig": {
     "Ip": "127.0.0.1",
     "Port": 8080,
-    "ConnectionString": "Server=.;Database=Test;User Id=user;Password=;"
+    "ConnectionString": "Data Source=(localdb)\\MSSQLLocalDB;Initial Catalog=AutoSalon;Integrated Security=True;Connect Timeout=30;Encrypt=True;Trust Server Certificate=False;Application Intent=ReadWrite;Multi Subnet Failover=False"
   }
 }
