@@ -1,7 +1,8 @@
-﻿using System.Diagnostics;
+﻿using Common.Communication;
+using Common.Domain;
+using System.Diagnostics;
 using System.Net.Sockets;
 using System.Text.Json;
-using Common.Communication;
 
 namespace ServerApp
 {
@@ -14,6 +15,7 @@ namespace ServerApp
         private JsonNetworkSerializer serializer;
         private Socket clientSocket;
         private Server server;
+        private Controller controller;
 
         /// <summary>
         /// Kreira novi ClientHandler za datog klijenta.
@@ -25,6 +27,7 @@ namespace ServerApp
             this.clientSocket = clientSocket;
             this.server = server;
             serializer = new JsonNetworkSerializer(clientSocket);
+            controller = Controller.Instance;
         }
 
         /// <summary>
@@ -72,23 +75,40 @@ namespace ServerApp
         /// Obradjuje pojedinačni zahtev klijenta i vraća odgovor.
         /// </summary>
         /// <param name="req">Zahtev koji treba obraditi.</param>
-        /// <returns>Odgovor sa rezultatom ili porukom o grešci.</returns>-
+        /// <returns>
+        /// Response objekat koji sadrži rezultat operacije u polju <see cref="Response.Result"/> 
+        /// ili poruku o grešci u polju <see cref="Response.ExceptionMessage"/>.
+        /// </returns>
         private Response ProcessRequest(Request req)
         {
-            Response r = new Response();
-            try
+            switch (req.Operation)
             {
-                switch (req.Operation)
-                {
-                    case Operation.None:
-                        break;
-                }
+                case Operation.PrijaviProdavac:
+                    req.Argument = serializer.ReadType<Prodavac>(req.Argument);
+                    break;
+                case Operation.KreirajKupac:
+                case Operation.PretraziKupac:
+                case Operation.VratiListuKupac:
+                case Operation.PromeniKupac:
+                case Operation.ObrisiKupac:
+                    req.Argument = serializer.ReadKupacPolymorphic(req.Argument);
+                    break;
+                case Operation.KreirajUgovor:
+                case Operation.PretraziUgovor:
+                case Operation.VratiListuUgovor:
+                case Operation.PromeniUgovor:
+                    req.Argument = serializer.ReadType<Ugovor>(req.Argument);
+                    break;
+
+                case Operation.UbaciKvalifikacija:
+                    req.Argument = serializer.ReadType<Kvalifikacija>(req.Argument);
+                    break;
+
+                default:
+                    break;
             }
-            catch (Exception ex)
-            {
-                Debug.WriteLine(ex.Message);
-                r.ExceptionMessage = ex.Message;
-            }
+            Response r = controller.ProcessRequest(req);
+            
             return r;
         }
     }
