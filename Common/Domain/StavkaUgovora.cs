@@ -67,10 +67,11 @@ namespace Common.Domain
             "idUgovor = @idUgovor, rb = @rb, idAutomobil = @idAutomobil, cenaAutomobila = @cenaAutomobila, popust = @popust,  iznos = @iznos";
 
         /// <inheritdoc/>
-        public string WhereCondition => $"{TableAlias}.idUgovor = @idUgovor AND {TableAlias}.rb = @rb";
+        public string WhereCondition => $"idUgovor = @idUgovor AND rb = @rb";
 
         /// <inheritdoc/>
-        public string? JoinTable => "Automobil a";
+        public string? JoinTable => "JOIN Automobil a ON " +
+            $"{TableAlias}.idAutomobil = a.idAutomobil";
 
         /// <inheritdoc/>
         public string? JoinCondition => $"{TableAlias}.idAutomobil = a.idAutomobil";
@@ -80,6 +81,7 @@ namespace Common.Domain
         {
             return new List<SqlParameter>
             {
+                new SqlParameter("@idUgovor", SqlDbType.Int) { Value = Ugovor.IdUgovor },
                 new SqlParameter("@rb", SqlDbType.Int) { Value = Rb },
                 new SqlParameter("@idAutomobil", SqlDbType.Int) { Value = Automobil.IdAutomobil },
                 new SqlParameter("@cenaAutomobila", SqlDbType.Float) { Value = CenaAutomobila },
@@ -141,30 +143,6 @@ namespace Common.Domain
             {
                 whereClause += $" AND {TableAlias}.rb = @rb";
                 parameters.Add(new SqlParameter("@rb", Rb));
-            }
-
-            if (Automobil.IdAutomobil > 0)
-            {
-                whereClause += $" AND {TableAlias}.idAutomobil = @idAutomobil";
-                parameters.Add(new SqlParameter("@idAutomobil", Automobil.IdAutomobil));
-            }
-
-            if (CenaAutomobila > 0)
-            {
-                whereClause += $" AND {TableAlias}.cenaAutomobila <= @cenaAutomobila";
-                parameters.Add(new SqlParameter("@cenaAutomobila", CenaAutomobila));
-            }
-
-            if (Popust > 0)
-            {
-                whereClause += $" AND {TableAlias}.popust <= @popust";
-                parameters.Add(new SqlParameter("@popust", Popust));
-            }
-
-            if (Iznos > 0)
-            {
-                whereClause += $" AND {TableAlias}.iznos <= @iznos";
-                parameters.Add(new SqlParameter("@iznos", Iznos));
             }
 
             return (whereClause, parameters);
