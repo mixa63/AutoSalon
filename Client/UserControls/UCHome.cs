@@ -16,5 +16,10 @@ namespace Client.UserControls
         {
             InitializeComponent();
         }
+
+        public void SetWelcomeMessage(string msg)
+        {
+            lblDobrodosli.Text = msg;
+        }
     }
 }
