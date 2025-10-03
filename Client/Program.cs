@@ -1,3 +1,5 @@
+using Client.GuiController;
+using Client.Forms;
 namespace Client
 {
     internal static class Program
@@ -11,7 +13,9 @@ namespace Client
             // To customize application configuration such as set high DPI settings or default font,
             // see https://aka.ms/applicationconfiguration.
             ApplicationConfiguration.Initialize();
-            Application.Run(new FrmMain());
+            var frmLogin = new FrmLogin();
+            var controller = new LoginController(frmLogin);
+            Application.Run(frmLogin);
         }
     }
 }
