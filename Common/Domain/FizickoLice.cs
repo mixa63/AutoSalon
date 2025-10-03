@@ -7,16 +7,11 @@ using System.Data.Common;
 namespace Common.Domain
 {
     /// <summary>
-    /// Predstavlja kupca koji je fizičko lice (osoba).
+    /// Predstavlja kupca koji je fizičko lice.
     /// Sadrži lične podatke osobe.
     /// </summary>
-    public class FizickoLice : IEntity
+    public class FizickoLice : Kupac
     {
-        /// <summary>
-        /// Referenca na generičkog kupca.
-        /// </summary>
-        public Kupac Kupac { get; set; }
-
         /// <summary>
         /// Ime fizičkog lica.
         /// </summary>
@@ -38,41 +33,38 @@ namespace Common.Domain
         public string JMBG { get; set; }
 
         /// <inheritdoc/>
-        public string TableName => "FizickoLice";
+        public override string TableName => "FizickoLice";
 
         /// <inheritdoc/>
-        public string TableAlias => "fl";
+        public override string TableAlias => "fl";
 
         /// <inheritdoc/>
-        public string PrimaryKeyColumn => "fl.idKupac";
+        public override string PrimaryKeyColumn => "fl.idKupac";
 
         /// <inheritdoc/>
-        public string SelectColumns => "fl.idKupac, fl.ime, fl.prezime, fl.telefon, fl.jmbg";
+        public override string SelectColumns => "fl.idKupac, fl.ime, fl.prezime, fl.telefon, fl.jmbg, k.email";
 
         /// <inheritdoc/>
-        public string InsertColumns => "idKupac, ime, prezime, telefon, jmbg";
+        public override string InsertColumns => "idKupac, ime, prezime, telefon, jmbg";
 
         /// <inheritdoc/>
-        public string InsertValuesPlaceholders => "@idKupac, @ime, @prezime, @telefon, @jmbg";
+        public override string InsertValuesPlaceholders => "@idKupac, @ime, @prezime, @telefon, @jmbg";
 
         /// <inheritdoc/>
-        public string UpdateSetClause => "ime = @ime, prezime = @prezime, telefon = @telefon, jmbg = @jmbg";
+        public override string UpdateSetClause => "ime = @ime, prezime = @prezime, telefon = @telefon, jmbg = @jmbg";
 
         /// <inheritdoc/>
-        public string WhereCondition => "fl.idKupac = @idKupac";
+        public override string WhereCondition => "idKupac = @idKupac";
 
         /// <inheritdoc/>
-        public string? JoinTable => null;
+        public override string? JoinTable => "INNER JOIN Kupac k ON fl.idKupac = k.idKupac";
 
         /// <inheritdoc/>
-        public string? JoinCondition => null;
-
-        /// <inheritdoc/>
-        public List<SqlParameter> GetInsertParameters()
+        public override List<SqlParameter> GetInsertParameters()
         {
             return new List<SqlParameter>
             {
-                new SqlParameter("@idKupac", SqlDbType.Int) { Value = Kupac.IdKupac },
+                new SqlParameter("@idKupac", SqlDbType.Int) { Value = IdKupac },
                 new SqlParameter("@ime", SqlDbType.NVarChar) { Value = Ime },
                 new SqlParameter("@prezime", SqlDbType.NVarChar) { Value = Prezime },
                 new SqlParameter("@telefon", SqlDbType.NVarChar) { Value = Telefon },
@@ -81,7 +73,7 @@ namespace Common.Domain
         }
 
         /// <inheritdoc/>
-        public List<SqlParameter> GetUpdateParameters()
+        public override List<SqlParameter> GetUpdateParameters()
         {
             return new List<SqlParameter>
             {
@@ -89,28 +81,29 @@ namespace Common.Domain
                 new SqlParameter("@prezime", SqlDbType.NVarChar) { Value = Prezime },
                 new SqlParameter("@telefon", SqlDbType.NVarChar) { Value = Telefon },
                 new SqlParameter("@jmbg", SqlDbType.NVarChar) { Value = JMBG },
-                new SqlParameter("@idKupac", SqlDbType.Int) { Value = Kupac.IdKupac }
+                new SqlParameter("@idKupac", SqlDbType.Int) { Value = IdKupac }
             };
         }
 
         /// <inheritdoc/>
-        public List<SqlParameter> GetPrimaryKeyParameters()
+        public override List<SqlParameter> GetPrimaryKeyParameters()
         {
             return new List<SqlParameter>
             {
-                new SqlParameter("@idKupac", SqlDbType.Int) { Value = Kupac.IdKupac }
+                new SqlParameter("@idKupac", SqlDbType.Int) { Value = IdKupac }
             };
         }
 
         /// <inheritdoc/>
-        public List<IEntity> ReadEntities(DbDataReader reader)
+        public override List<IEntity> ReadEntities(DbDataReader reader)
         {
             var fizickaLica = new List<IEntity>();
             while (reader.Read())
             {
                 fizickaLica.Add(new FizickoLice
                 {
-                    Kupac = new Kupac { IdKupac = Convert.ToInt32(reader["idKupac"]) },
+                    IdKupac = Convert.ToInt32(reader["idKupac"]),
+                    Email = reader["email"].ToString(),
                     Ime = reader["ime"].ToString(),
                     Prezime = reader["prezime"].ToString(),
                     Telefon = reader["telefon"].ToString(),
@@ -121,15 +114,15 @@ namespace Common.Domain
         }
 
         /// <inheritdoc/>
-        public (string whereClause, List<SqlParameter> parameters) GetWhereClauseWithParameters()
+        public override (string whereClause, List<SqlParameter> parameters) GetWhereClauseWithParameters()
         {
             var parameters = new List<SqlParameter>();
             var whereClause = "1=1";
 
-            if (Kupac != null && Kupac.IdKupac > 0)
+            if (IdKupac > 0)
             {
                 whereClause += " AND fl.idKupac = @idKupac";
-                parameters.Add(new SqlParameter("@idKupac", Kupac.IdKupac));
+                parameters.Add(new SqlParameter("@idKupac", IdKupac));
             }
 
             if (!string.IsNullOrEmpty(Ime))

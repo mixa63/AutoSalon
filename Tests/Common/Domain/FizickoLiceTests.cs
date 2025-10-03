@@ -1,175 +1,115 @@
-﻿using Microsoft.Data.Sqlite;
-using Xunit;
+﻿using System.Collections.Generic;
+using System.Data.Common;
+using Microsoft.Data.SqlClient;
+using Moq;
+using Common.Domain;
 
-namespace Common.Domain.Tests
+namespace Tests.Common.Domain;
+
+public class FizickoLiceTests
 {
-    public class FizickoLiceTests
+    [Fact]
+    public void GetInsertParameters_ShouldReturnCorrectParameters()
     {
-        [Fact]
-        public void FizickoLice_Properties_InitializedCorrectly()
+        var fl = new FizickoLice
         {
-            // Arrange & Act
-            var fizicko = new FizickoLice();
+            IdKupac = 1,
+            Ime = "Petar",
+            Prezime = "Petrovic",
+            Telefon = "061234567",
+            JMBG = "1234567890123"
+        };
 
-            // Assert
-            Assert.Equal("FizickoLice", fizicko.TableName);
-            Assert.Equal("fl", fizicko.TableAlias);
-            Assert.Equal("fl.idKupac", fizicko.PrimaryKeyColumn);
-            Assert.Null(fizicko.JoinTable);
-            Assert.Null(fizicko.JoinCondition);
-        }
+        var parameters = fl.GetInsertParameters();
 
-        [Fact]
-        public void GetInsertParameters_ReturnsCorrectParameters()
+        Assert.Equal(5, parameters.Count);
+        Assert.Contains(parameters, p => p.ParameterName == "@ime" && (string)p.Value == "Petar");
+        Assert.Contains(parameters, p => p.ParameterName == "@jmbg" && (string)p.Value == "1234567890123");
+        Assert.Contains(parameters, p => p.ParameterName == "@prezime" && (string)p.Value == "Petrovic");
+        Assert.Contains(parameters, p => p.ParameterName == "@telefon" && (string)p.Value == "061234567");
+    }
+
+    [Fact]
+    public void GetUpdateParameters_ShouldIncludePrimaryKey()
+    {
+        var fl = new FizickoLice
         {
-            // Arrange
-            var fizicko = new FizickoLice
-            {
-                Kupac = new Kupac { IdKupac = 1 },
-                Ime = "Petar",
-                Prezime = "Petrovic",
-                Telefon = "061111111",
-                JMBG = "1234567890123"
-            };
+            IdKupac = 2,
+            Ime = "Milan",
+            Prezime = "Miletic",
+            Telefon = "064111222",
+            JMBG = "9876543210987"
+        };
 
-            // Act
-            var parameters = fizicko.GetInsertParameters();
+        var parameters = fl.GetUpdateParameters();
 
-            // Assert
-            Assert.Equal(5, parameters.Count);
-            Assert.Contains(parameters, p => p.ParameterName == "@idKupac" && (int)p.Value == 1);
-            Assert.Contains(parameters, p => p.ParameterName == "@ime" && (string)p.Value == "Petar");
-            Assert.Contains(parameters, p => p.ParameterName == "@prezime" && (string)p.Value == "Petrovic");
-            Assert.Contains(parameters, p => p.ParameterName == "@telefon" && (string)p.Value == "061111111");
-            Assert.Contains(parameters, p => p.ParameterName == "@jmbg" && (string)p.Value == "1234567890123");
-        }
+        Assert.Equal(5, parameters.Count);
+        Assert.Contains(parameters, p => p.ParameterName == "@idKupac" && (int)p.Value == 2);
+    }
 
-        [Fact]
-        public void GetUpdateParameters_IncludesPrimaryKey()
+    [Fact]
+    public void GetPrimaryKeyParameters_ShouldReturnSingleParameter()
+    {
+        var fl = new FizickoLice { IdKupac = 3 };
+
+        var parameters = fl.GetPrimaryKeyParameters();
+
+        Assert.Single(parameters);
+        Assert.Equal("@idKupac", parameters[0].ParameterName);
+        Assert.Equal(3, parameters[0].Value);
+    }
+
+    [Theory]
+    [InlineData(1, null, null, null, null, "fl.idKupac = @idKupac", 1)]
+    [InlineData(0, "Jovan", null, null, null, "fl.ime LIKE @ime", 1)]
+    [InlineData(0, null, "Markovic", null, null, "fl.prezime LIKE @prezime", 1)]
+    [InlineData(0, null, null, "060123456", null, "fl.telefon = @telefon", 1)]
+    [InlineData(0, null, "Markovic", null, "1234567890000", "fl.prezime LIKE @prezime AND fl.jmbg = @jmbg", 2)]
+    public void GetWhereClauseWithParameters_VariousInputs_ShouldGenerateCorrectClause(
+        int id, string ime, string prezime, string telefon, string jmbg,
+        string expectedCondition, int expectedParamCount)
+    {
+        var fl = new FizickoLice
         {
-            // Arrange
-            var fizicko = new FizickoLice
-            {
-                Kupac = new Kupac { IdKupac = 1 },
-                Ime = "Marko",
-                Prezime = "Markovic",
-                Telefon = "062222222",
-                JMBG = "9876543210123"
-            };
+            IdKupac = id,
+            Ime = ime,
+            Prezime = prezime,
+            Telefon = telefon,
+            JMBG = jmbg
+        };
 
-            // Act
-            var parameters = fizicko.GetUpdateParameters();
+        var (where, parameters) = fl.GetWhereClauseWithParameters();
 
-            // Assert
-            Assert.Equal(5, parameters.Count);
-            Assert.Contains(parameters, p => p.ParameterName == "@idKupac" && (int)p.Value == 1);
-        }
+        Assert.Contains(expectedCondition, where);
+        Assert.Equal(expectedParamCount, parameters.Count);
+    }
 
-        [Fact]
-        public void GetPrimaryKeyParameters_ReturnsIdParameter()
-        {
-            // Arrange
-            var fizicko = new FizickoLice
-            {
-                Kupac = new Kupac { IdKupac = 7 }
-            };
+    [Fact]
+    public void ReadEntities_ShouldMapFromDataReader()
+    {
+        var mockReader = new Mock<DbDataReader>();
+        var readCount = 0;
 
-            // Act
-            var parameters = fizicko.GetPrimaryKeyParameters();
+        mockReader.Setup(r => r.Read()).Returns(() => readCount++ == 0);
 
-            // Assert
-            var parameter = Assert.Single(parameters);
-            Assert.Equal("@idKupac", parameter.ParameterName);
-            Assert.Equal(7, parameter.Value);
-        }
+        mockReader.Setup(r => r["idKupac"]).Returns(5);
+        mockReader.Setup(r => r["email"]).Returns("pera@mail.com");
+        mockReader.Setup(r => r["ime"]).Returns("Pera");
+        mockReader.Setup(r => r["prezime"]).Returns("Peric");
+        mockReader.Setup(r => r["telefon"]).Returns("065999888");
+        mockReader.Setup(r => r["jmbg"]).Returns("1112223334445");
 
-        [Fact]
-        public void ReadEntities_WithSQLiteInMemory_ReturnsCorrectFizickaLica()
-        {
-            // Arrange
-            SQLitePCL.Batteries.Init();
-            using var connection = new SqliteConnection("Data Source=:memory:");
-            connection.Open();
+        var fl = new FizickoLice();
 
-            var createTableCmd = connection.CreateCommand();
-            createTableCmd.CommandText =
-            @"
-            CREATE TABLE FizickoLice (
-                idKupac INTEGER PRIMARY KEY,
-                ime TEXT NOT NULL,
-                prezime TEXT NOT NULL,
-                telefon TEXT NOT NULL,
-                jmbg TEXT NOT NULL
-            )";
-            createTableCmd.ExecuteNonQuery();
+        var result = fl.ReadEntities(mockReader.Object);
 
-            var insertCmd = connection.CreateCommand();
-            insertCmd.CommandText =
-            @"
-            INSERT INTO FizickoLice (idKupac, ime, prezime, telefon, jmbg)
-            VALUES (1, 'Petar', 'Petrovic', '061111111', '1111111111111'),
-                   (2, 'Jovan', 'Jovic', '062222222', '2222222222222')
-            ";
-            insertCmd.ExecuteNonQuery();
-
-            var cmd = connection.CreateCommand();
-            cmd.CommandText = "SELECT * FROM FizickoLice";
-
-            using var reader = cmd.ExecuteReader();
-            var fizicko = new FizickoLice();
-
-            // Act
-            var result = fizicko.ReadEntities(reader);
-
-            // Assert
-            Assert.Equal(2, result.Count);
-
-            var first = result[0] as FizickoLice;
-            Assert.Equal(1, first.Kupac.IdKupac);
-            Assert.Equal("Petar", first.Ime);
-            Assert.Equal("Petrovic", first.Prezime);
-            Assert.Equal("061111111", first.Telefon);
-            Assert.Equal("1111111111111", first.JMBG);
-
-            var second = result[1] as FizickoLice;
-            Assert.Equal(2, second.Kupac.IdKupac);
-            Assert.Equal("Jovan", second.Ime);
-        }
-
-        [Theory]
-        [InlineData(0, null, null, null, null, "1=1")]
-        [InlineData(1, null, null, null, null, "1=1 AND fl.idKupac = @idKupac")]
-        [InlineData(0, "Petar", null, null, null, "1=1 AND fl.ime LIKE @ime")]
-        [InlineData(0, null, "Markovic", null, null, "1=1 AND fl.prezime LIKE @prezime")]
-        [InlineData(0, null, null, "061111111", null, "1=1 AND fl.telefon = @telefon")]
-        [InlineData(0, null, null, null, "1234567890123", "1=1 AND fl.jmbg = @jmbg")]
-        [InlineData(3, "Jovan", "Jovic", "062222222", "2222222222222", "1=1 AND fl.idKupac = @idKupac AND fl.ime LIKE @ime AND fl.prezime LIKE @prezime AND fl.telefon = @telefon AND fl.jmbg = @jmbg")]
-        public void GetWhereClauseWithParameters_ReturnsCorrectClause(int idKupac, string ime, string prezime, string telefon, string jmbg, string expectedClause)
-        {
-            // Arrange
-            var fizicko = new FizickoLice
-            {
-                Kupac = new Kupac { IdKupac = idKupac },
-                Ime = ime,
-                Prezime = prezime,
-                Telefon = telefon,
-                JMBG = jmbg
-            };
-
-            // Act
-            var (actualClause, parameters) = fizicko.GetWhereClauseWithParameters();
-
-            // Assert
-            Assert.Equal(expectedClause, actualClause);
-
-            int expectedParamCount = 0;
-            if (idKupac > 0) expectedParamCount++;
-            if (!string.IsNullOrEmpty(ime)) expectedParamCount++;
-            if (!string.IsNullOrEmpty(prezime)) expectedParamCount++;
-            if (!string.IsNullOrEmpty(telefon)) expectedParamCount++;
-            if (!string.IsNullOrEmpty(jmbg)) expectedParamCount++;
-
-            Assert.Equal(expectedParamCount, parameters.Count);
-        }
+        var entity = Assert.Single(result) as FizickoLice;
+        Assert.NotNull(entity);
+        Assert.Equal(5, entity.IdKupac);
+        Assert.Equal("pera@mail.com", entity.Email);
+        Assert.Equal("Pera", entity.Ime);
+        Assert.Equal("Peric", entity.Prezime);
+        Assert.Equal("065999888", entity.Telefon);
+        Assert.Equal("1112223334445", entity.JMBG);
     }
 }

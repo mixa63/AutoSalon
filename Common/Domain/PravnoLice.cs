@@ -7,16 +7,11 @@ using System.Data.Common;
 namespace Common.Domain
 {
     /// <summary>
-    /// Predstavlja kupca koji je pravno lice (firma).
+    /// Predstavlja kupca koji je pravno lice.
     /// Sadrži dodatne informacije vezane za firmu.
     /// </summary>
-    public class PravnoLice : IEntity
+    public class PravnoLice : Kupac
     {
-        /// <summary>
-        /// Referenca na generičkog kupca.
-        /// </summary>
-        public Kupac Kupac { get; set; }
-
         /// <summary>
         /// Naziv firme.
         /// </summary>
@@ -25,7 +20,7 @@ namespace Common.Domain
         /// <summary>
         /// PIB firme.
         /// </summary>
-        public int PIB { get; set; }
+        public String PIB { get; set; }
 
         /// <summary>
         /// Matični broj firme.
@@ -33,79 +28,78 @@ namespace Common.Domain
         public string MaticniBroj { get; set; }
 
         /// <inheritdoc/>
-        public string TableName => "PravnoLice";
+        public override string TableName => "PravnoLice";
 
         /// <inheritdoc/>
-        public string TableAlias => "pl";
+        public override string TableAlias => "pl";
 
         /// <inheritdoc/>
-        public string PrimaryKeyColumn => "pl.idKupac";
+        public override string PrimaryKeyColumn => "pl.idKupac";
 
         /// <inheritdoc/>
-        public string SelectColumns => "pl.idKupac, pl.nazivFirme, pl.pib, pl.maticniBroj";
+        public override string SelectColumns => "pl.idKupac, pl.nazivFirme, pl.pib, pl.maticniBroj, k.email";
 
         /// <inheritdoc/>
-        public string InsertColumns => "idKupac, nazivFirme, pib, maticniBroj";
+        public override string InsertColumns => "idKupac, nazivFirme, pib, maticniBroj";
 
         /// <inheritdoc/>
-        public string InsertValuesPlaceholders => "@idKupac, @nazivFirme, @pib, @maticniBroj";
+        public override string InsertValuesPlaceholders => "@idKupac, @nazivFirme, @pib, @maticniBroj";
 
         /// <inheritdoc/>
-        public string UpdateSetClause => "nazivFirme = @nazivFirme, pib = @pib, maticniBroj = @maticniBroj";
+        public override string UpdateSetClause => "nazivFirme = @nazivFirme, pib = @pib, maticniBroj = @maticniBroj";
 
         /// <inheritdoc/>
-        public string WhereCondition => "pl.idKupac = @idKupac";
+        public override string WhereCondition => "idKupac = @idKupac";
 
         /// <inheritdoc/>
-        public string? JoinTable => null;
+        public override string? JoinTable => "INNER JOIN Kupac k ON pl.idKupac = k.idKupac";
+
 
         /// <inheritdoc/>
-        public string? JoinCondition => null;
-
-        /// <inheritdoc/>
-        public List<SqlParameter> GetInsertParameters()
+        public override List<SqlParameter> GetInsertParameters()
         {
             return new List<SqlParameter>
             {
-                new SqlParameter("@idKupac", SqlDbType.Int) { Value = Kupac.IdKupac },
+                new SqlParameter("@idKupac", SqlDbType.Int) { Value = IdKupac },
                 new SqlParameter("@nazivFirme", SqlDbType.NVarChar) { Value = NazivFirme },
-                new SqlParameter("@pib", SqlDbType.Int) { Value = PIB },
+                new SqlParameter("@pib", SqlDbType.NVarChar) { Value = PIB },
                 new SqlParameter("@maticniBroj", SqlDbType.NVarChar) { Value = MaticniBroj }
             };
         }
 
         /// <inheritdoc/>
-        public List<SqlParameter> GetUpdateParameters()
+        public override List<SqlParameter> GetUpdateParameters()
         {
             return new List<SqlParameter>
             {
                 new SqlParameter("@nazivFirme", SqlDbType.NVarChar) { Value = NazivFirme },
-                new SqlParameter("@pib", SqlDbType.Int) { Value = PIB },
+                new SqlParameter("@pib", SqlDbType.NVarChar) { Value = PIB },
                 new SqlParameter("@maticniBroj", SqlDbType.NVarChar) { Value = MaticniBroj },
-                new SqlParameter("@idKupac", SqlDbType.Int) { Value = Kupac.IdKupac }
+                new SqlParameter("@idKupac", SqlDbType.Int) { Value = IdKupac }
             };
         }
 
         /// <inheritdoc/>
-        public List<SqlParameter> GetPrimaryKeyParameters()
+        public override List<SqlParameter> GetPrimaryKeyParameters()
         {
             return new List<SqlParameter>
             {
-                new SqlParameter("@idKupac", SqlDbType.Int) { Value = Kupac.IdKupac }
+                new SqlParameter("@idKupac", SqlDbType.Int) { Value = IdKupac }
             };
         }
 
         /// <inheritdoc/>
-        public List<IEntity> ReadEntities(DbDataReader reader)
+        public override List<IEntity> ReadEntities(DbDataReader reader)
         {
             var pravnaLica = new List<IEntity>();
             while (reader.Read())
             {
                 pravnaLica.Add(new PravnoLice
                 {
-                    Kupac = new Kupac { IdKupac = Convert.ToInt32(reader["idKupac"]) },
+                    IdKupac = Convert.ToInt32(reader["idKupac"]),
+                    Email = reader["email"].ToString(),
                     NazivFirme = reader["nazivFirme"].ToString(),
-                    PIB = Convert.ToInt32(reader["pib"]),
+                    PIB = reader["pib"].ToString(),
                     MaticniBroj = reader["maticniBroj"].ToString()
                 });
             }
@@ -113,15 +107,15 @@ namespace Common.Domain
         }
 
         /// <inheritdoc/>
-        public (string whereClause, List<SqlParameter> parameters) GetWhereClauseWithParameters()
+        public override (string whereClause, List<SqlParameter> parameters) GetWhereClauseWithParameters()
         {
             var parameters = new List<SqlParameter>();
             var whereClause = "1=1";
 
-            if (Kupac != null && Kupac.IdKupac > 0)
+            if (IdKupac > 0)
             {
                 whereClause += " AND pl.idKupac = @idKupac";
-                parameters.Add(new SqlParameter("@idKupac", Kupac.IdKupac));
+                parameters.Add(new SqlParameter("@idKupac", IdKupac));
             }
 
             if (!string.IsNullOrEmpty(NazivFirme))
@@ -130,7 +124,7 @@ namespace Common.Domain
                 parameters.Add(new SqlParameter("@nazivFirme", $"%{NazivFirme}%"));
             }
 
-            if (PIB > 0)
+            if (!string.IsNullOrEmpty(PIB))
             {
                 whereClause += " AND pl.pib = @pib";
                 parameters.Add(new SqlParameter("@pib", PIB));
