@@ -8,7 +8,7 @@ namespace Common.Domain
 {
     /// <summary>
     /// Predstavlja prodavca u sistemu (osobu koja zaključuje ugovore i poseduje kvalifikacije).
-    /// Mapea se na tabelu "Prodavac" u bazi podataka i implementira opšti <see cref="IEntity"/> interfejs.
+    /// Mapira se na tabelu "Prodavac" u bazi podataka i implementira opšti <see cref="IEntity"/> interfejs.
     /// </summary>
     public class Prodavac : IEntity
     {
@@ -24,7 +24,7 @@ namespace Common.Domain
         /// <summary>Korisničko ime (username) za prijavu prodavca.</summary>
         public string Username { get; set; }
 
-        /// <summary>Lozinka (ili hash lozinke) prodavca.</summary>
+        /// <summary>Lozinka prodavca.</summary>
         public string Password { get; set; }
 
         /// <inheritdoc/>
@@ -54,9 +54,6 @@ namespace Common.Domain
 
         /// <inheritdoc/>
         public string? JoinTable => null;
-
-        /// <inheritdoc/>
-        public string? JoinCondition => null;
 
         /// <summary>
         /// Generiše listu <see cref="SqlParameter"/> objekata za <c>INSERT</c> upit za tabelu Prodavac.
@@ -142,25 +139,30 @@ namespace Common.Domain
 
             if (!string.IsNullOrEmpty(Ime))
             {
-                // ime će se pretraživati pomoću LIKE (delimično poklapanje)
+                
                 whereClause += $" AND {TableAlias}.ime LIKE @ime";
                 parameters.Add(new SqlParameter("@ime", SqlDbType.NVarChar) { Value = $"%{Ime}%" });
             }
 
             if (!string.IsNullOrEmpty(Prezime))
             {
-                // prezime će se pretraživati pomoću LIKE (delimično poklapanje)
+               
                 whereClause += $" AND {TableAlias}.prezime LIKE @prezime";
                 parameters.Add(new SqlParameter("@prezime", SqlDbType.NVarChar) { Value = $"%{Prezime}%" });
             }
 
             if (!string.IsNullOrEmpty(Username))
             {
-                // username uglavnom tražimo tačno, ali možeš promeniti u LIKE ako želiš delimično pretraživanje
+               
                 whereClause += $" AND {TableAlias}.username = @username";
                 parameters.Add(new SqlParameter("@username", SqlDbType.NVarChar) { Value = Username });
             }
-
+            if (!string.IsNullOrEmpty(Password))
+            {
+                
+                whereClause += $" AND {TableAlias}.password = @password";
+                parameters.Add(new SqlParameter("@password", SqlDbType.NVarChar) { Value = Password });
+            }
             return (whereClause, parameters);
         }
     }
