@@ -38,9 +38,6 @@ namespace Common.Domain
         /// <summary>Naziv spoljneg entiteta sa kojim se spaja (opciono).</summary>
         string? JoinTable { get; }
 
-        /// <summary>Uslov spajanja za <c>JOIN</c> upite (opciono).</summary>
-        string? JoinCondition { get; }
-
         /// <summary>
         /// Kreira listu parametara za <c>INSERT</c> operaciju.
         /// </summary>
