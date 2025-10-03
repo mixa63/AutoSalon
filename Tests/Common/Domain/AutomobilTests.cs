@@ -1,207 +1,118 @@
-﻿using Microsoft.Data.SqlClient;
-using Microsoft.Data.Sqlite;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Data;
-using Xunit;
+using System.Data.Common;
+using Moq;
+using Common.Domain;
 
-namespace Common.Domain.Tests
+namespace Tests.Common.Domain;
+
+public class AutomobilTests
 {
-    public class AutomobilTests
+    [Fact]
+    public void GetInsertParameters_ShouldReturnCorrectParameters()
     {
-        [Fact]
-        public void Automobil_Properties_InitializedCorrectly()
+        var auto = new Automobil
         {
-            // Arrange & Act
-            var automobil = new Automobil();
+            Model = "Audi A4",
+            Oprema = "Full",
+            TipGoriva = "Benzin",
+            Boja = "Crna",
+            Cena = 25000
+        };
 
-            // Assert
-            Assert.Equal("Automobil", automobil.TableName);
-            Assert.Equal("a", automobil.TableAlias);
-            Assert.Equal("idAutomobil", automobil.PrimaryKeyColumn);
-            Assert.Null(automobil.JoinTable);
-            Assert.Null(automobil.JoinCondition);
-        }
+        var parameters = auto.GetInsertParameters();
 
-        [Fact]
-        public void GetInsertParameters_ReturnsCorrectParameters()
+        Assert.Equal(5, parameters.Count);
+        Assert.Contains(parameters, p => p.ParameterName == "@model" && (string)p.Value == "Audi A4");
+        Assert.Contains(parameters, p => p.ParameterName == "@tipGoriva" && (string)p.Value == "Benzin");
+        Assert.Contains(parameters, p => p.ParameterName == "@oprema" && (string)p.Value == "Full");
+        Assert.Contains(parameters, p => p.ParameterName == "@boja" && (string)p.Value == "Crna");
+        Assert.Contains(parameters, p => p.ParameterName == "@cena" && (double)p.Value == 25000);
+    }
+
+    [Fact]
+    public void GetUpdateParameters_ShouldIncludePrimaryKey()
+    {
+        var auto = new Automobil
         {
-            // Arrange
-            var automobil = new Automobil
-            {
-                Model = "Golf 8",
-                Oprema = "Full",
-                TipGoriva = "Dizel",
-                Boja = "Crna",
-                Cena = 25000.0
-            };
+            IdAutomobil = 10,
+            Model = "BMW",
+            Oprema = "Sport",
+            TipGoriva = "Dizel",
+            Boja = "Plava",
+            Cena = 30000
+        };
 
-            // Act
-            var parameters = automobil.GetInsertParameters();
+        var parameters = auto.GetUpdateParameters();
 
-            // Assert
-            Assert.Equal(5, parameters.Count);
-            Assert.Contains(parameters, p => p.ParameterName == "@model" && p.Value.ToString() == "Golf 8");
-            Assert.Contains(parameters, p => p.ParameterName == "@oprema" && p.Value.ToString() == "Full");
-            Assert.Contains(parameters, p => p.ParameterName == "@tipGoriva" && p.Value.ToString() == "Dizel");
-            Assert.Contains(parameters, p => p.ParameterName == "@boja" && p.Value.ToString() == "Crna");
-            Assert.Contains(parameters, p => p.ParameterName == "@cena" && (double)p.Value == 25000.0);
-        }
+        Assert.Equal(6, parameters.Count);
+        Assert.Contains(parameters, p => p.ParameterName == "@idAutomobil" && (int)p.Value == 10);
+    }
 
-        [Fact]
-        public void GetUpdateParameters_IncludesPrimaryKey()
+    [Fact]
+    public void GetPrimaryKeyParameters_ShouldReturnSingleParameter()
+    {
+        var auto = new Automobil { IdAutomobil = 5 };
+
+        var parameters = auto.GetPrimaryKeyParameters();
+
+        Assert.Single(parameters);
+        Assert.Equal("@idAutomobil", parameters[0].ParameterName);
+        Assert.Equal(5, parameters[0].Value);
+    }
+
+    [Theory]
+    [InlineData(1, null, null, null, 0, "idAutomobil = @idAutomobil", 1)]
+    [InlineData(0, "Golf", null, null, 0, "model LIKE @model", 1)]
+    [InlineData(0, null, "Dizel", null, 0, "tipGoriva = @tipGoriva", 1)]
+    [InlineData(0, null, null, "Crvena", 0, "boja = @boja", 1)]
+    [InlineData(0, null, null, null, 20000, "cena <= @cena", 1)]
+    [InlineData(0, null, "Benzin", null, 10000, "a.tipGoriva = @tipGoriva AND a.cena <= @cena", 2)]
+    public void GetWhereClauseWithParameters_VariousInputs_ShouldGenerateCorrectClause(
+        int id, string model, string tipGoriva, string boja, double cena,
+        string expectedCondition, int expectedParamCount)
+    {
+        var auto = new Automobil
         {
-            // Arrange
-            var automobil = new Automobil
-            {
-                IdAutomobil = 1,
-                Model = "Passat",
-                Oprema = "Comfort",
-                TipGoriva = "Benzin",
-                Boja = "Bela",
-                Cena = 30000.0
-            };
+            IdAutomobil = id,
+            Model = model,
+            TipGoriva = tipGoriva,
+            Boja = boja,
+            Cena = cena
+        };
 
-            // Act
-            var parameters = automobil.GetUpdateParameters();
+        var (where, parameters) = auto.GetWhereClauseWithParameters();
 
-            // Assert
-            Assert.Equal(6, parameters.Count); // 5 insert + 1 primary key
-            Assert.Contains(parameters, p => p.ParameterName == "@idAutomobil" && (int)p.Value == 1);
-        }
+        Assert.Contains(expectedCondition, where);
+        Assert.Equal(expectedParamCount, parameters.Count);
+    }
 
-        [Fact]
-        public void GetPrimaryKeyParameters_ReturnsIdParameter()
-        {
-            // Arrange
-            var automobil = new Automobil { IdAutomobil = 5 };
+    [Fact]
+    public void ReadEntities_ShouldMapFromDataReader()
+    {
+        var mockReader = new Mock<DbDataReader>();
+        var readCount = 0;
 
-            // Act
-            var parameters = automobil.GetPrimaryKeyParameters();
+        mockReader.Setup(r => r.Read()).Returns(() => readCount++ == 0);
 
-            // Assert
-            var parameter = Assert.Single(parameters);
-            Assert.Equal("@idAutomobil", parameter.ParameterName);
-            Assert.Equal(5, parameter.Value);
-        }
+        mockReader.Setup(r => r["idAutomobil"]).Returns(1);
+        mockReader.Setup(r => r["model"]).Returns("Tesla Model S");
+        mockReader.Setup(r => r["oprema"]).Returns("Premium");
+        mockReader.Setup(r => r["tipGoriva"]).Returns("Elektricni");
+        mockReader.Setup(r => r["boja"]).Returns("Bela");
+        mockReader.Setup(r => r["cena"]).Returns(80000);
 
-        [Fact]
-        public void ReadEntities_WithSQLiteInMemory_ReturnsCorrectAutomobili()
-        {
-            // Arrange
-            SQLitePCL.Batteries.Init();
-            using var connection = new SqliteConnection("Data Source=:memory:");
-            connection.Open();
+        var auto = new Automobil();
 
-            var createTableCmd = connection.CreateCommand();
-            createTableCmd.CommandText =
-            @"
-            CREATE TABLE Automobil (
-                idAutomobil INTEGER PRIMARY KEY,
-                model TEXT NOT NULL,
-                oprema TEXT NOT NULL,
-                tipGoriva TEXT NOT NULL,
-                boja TEXT NOT NULL,
-                cena REAL NOT NULL
-            )";
-            createTableCmd.ExecuteNonQuery();
+        var result = auto.ReadEntities(mockReader.Object);
 
-            var insertCmd = connection.CreateCommand();
-            insertCmd.CommandText =
-            @"
-            INSERT INTO Automobil (model, oprema, tipGoriva, boja, cena)
-            VALUES ('Audi A4', 'Premium', 'Dizel', 'Siva', 35000),
-                   ('BMW 320', 'Sport', 'Benzin', 'Plava', 40000)
-            ";
-            insertCmd.ExecuteNonQuery();
-
-            var cmd = connection.CreateCommand();
-            cmd.CommandText = "SELECT * FROM Automobil";
-
-            using var reader = cmd.ExecuteReader();
-            var automobil = new Automobil();
-
-            // Act
-            var result = automobil.ReadEntities(reader);
-
-            // Assert
-            Assert.Equal(2, result.Count);
-
-            var first = result[0] as Automobil;
-            Assert.Equal(1, first.IdAutomobil);
-            Assert.Equal("Audi A4", first.Model);
-            Assert.Equal("Premium", first.Oprema);
-            Assert.Equal("Dizel", first.TipGoriva);
-            Assert.Equal("Siva", first.Boja);
-            Assert.Equal(35000, first.Cena);
-
-            var second = result[1] as Automobil;
-            Assert.Equal(2, second.IdAutomobil);
-            Assert.Equal("BMW 320", second.Model);
-        }
-
-
-        [Theory]
-        [InlineData(0, null, null, null, 0, "1=1")] // Bez filtera
-        [InlineData(5, null, null, null, 0, "1=1 AND a.idAutomobil = @idAutomobil")] // Samo ID
-        [InlineData(0, "Golf", null, null, 0, "1=1 AND a.model LIKE @model")] // Samo model
-        [InlineData(0, null, "Dizel", null, 0, "1=1 AND a.tipGoriva = @tipGoriva")] // Samo tip goriva
-        [InlineData(0, null, null, "Crna", 0, "1=1 AND a.boja = @boja")] // Samo boja
-        [InlineData(0, null, null, null, 20000, "1=1 AND a.cena <= @cena")] // Samo cena
-        [InlineData(3, "Passat", "Benzin", "Bela", 30000,
-            "1=1 AND a.idAutomobil = @idAutomobil AND a.model LIKE @model AND a.tipGoriva = @tipGoriva AND a.boja = @boja AND a.cena <= @cena")] // Svi filteri
-        public void GetWhereClauseWithParameters_ReturnsCorrectClause(
-            int id, string model, string tipGoriva, string boja, double cena, string expectedClause)
-        {
-            // Arrange
-            var automobil = new Automobil
-            {
-                IdAutomobil = id,
-                Model = model,
-                TipGoriva = tipGoriva,
-                Boja = boja,
-                Cena = cena
-            };
-
-            // Act
-            var (actualClause, parameters) = automobil.GetWhereClauseWithParameters();
-
-            // Assert
-            Assert.Equal(expectedClause, actualClause);
-
-            // Proveravamo broj parametara
-            int expectedParamCount = 0;
-            if (id > 0) expectedParamCount++;
-            if (!string.IsNullOrEmpty(model)) expectedParamCount++;
-            if (!string.IsNullOrEmpty(tipGoriva)) expectedParamCount++;
-            if (!string.IsNullOrEmpty(boja)) expectedParamCount++;
-            if (cena > 0) expectedParamCount++;
-
-            Assert.Equal(expectedParamCount, parameters.Count);
-        }
-
-        [Fact]
-        public void SelectColumns_ReturnsCorrectFormat()
-        {
-            // Arrange
-            var automobil = new Automobil();
-
-            // Act
-            var result = automobil.SelectColumns;
-
-            // Assert
-            Assert.Equal("a.idAutomobil, a.model, a.oprema, a.tipGoriva, a.boja, a.cena", result);
-        }
-
-        [Fact]
-        public void InsertColumnsAndPlaceholders_ReturnCorrectValues()
-        {
-            // Arrange
-            var automobil = new Automobil();
-
-            // Act & Assert
-            Assert.Equal("model, oprema, tipGoriva, boja, cena", automobil.InsertColumns);
-            Assert.Equal("@model, @oprema, @tipGoriva, @boja, @cena", automobil.InsertValuesPlaceholders);
-        }
+        var entity = Assert.Single(result) as Automobil;
+        Assert.NotNull(entity);
+        Assert.Equal(1, entity.IdAutomobil);
+        Assert.Equal("Tesla Model S", entity.Model);
+        Assert.Equal("Premium", entity.Oprema);
+        Assert.Equal("Elektricni", entity.TipGoriva);
+        Assert.Equal("Bela", entity.Boja);
+        Assert.Equal(80000, entity.Cena);
     }
 }

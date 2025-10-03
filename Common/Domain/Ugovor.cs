@@ -43,14 +43,19 @@ namespace Common.Domain
         public double IznosSaPDV { get; set; }
 
         /// <summary>
-        /// ID prodavca koji sklapa ugovor.
+        /// Prodavac koji sklapa ugovor.
         /// </summary>
-        public int IdProdavac { get; set; }
+        public Prodavac Prodavac { get; set; }
 
         /// <summary>
-        /// ID kupca koji sklapa ugovor.
+        /// Kupac koji sklapa ugovor.
         /// </summary>
-        public int IdKupac { get; set; }
+        public Kupac Kupac { get; set; }
+
+        /// <summary>
+        /// Stavke ugovora koje predstavljaju automobile.
+        /// </summary>
+        public List<StavkaUgovora> Stavke { get; set; } = new();
 
         /// <inheritdoc/>
         public string TableName => "Ugovor";
@@ -63,7 +68,10 @@ namespace Common.Domain
 
         /// <inheritdoc/>
         public string SelectColumns =>
-            "u.idUgovor, u.datum, u.brAutomobila, u.pdv, u.iznosBezPDV, u.iznosSaPDV, u.idProdavac, u.idKupac";
+            "u.idUgovor, u.datum, u.brAutomobila, u.pdv, u.iznosBezPDV, u.iznosSaPDV, " +
+            "u.idProdavac, u.idKupac, " +
+            "p.ime AS ProdavacIme, k.email AS KupacEmail, " +
+            "a.model AS AutomobilModel";
 
         /// <inheritdoc/>
         public string InsertColumns => "datum, brAutomobila, pdv, iznosBezPDV, iznosSaPDV, idProdavac, idKupac";
@@ -77,13 +85,15 @@ namespace Common.Domain
             "iznosSaPDV = @iznosSaPDV, idProdavac = @idProdavac, idKupac = @idKupac";
 
         /// <inheritdoc/>
-        public string WhereCondition => "u.idUgovor = @idUgovor";
+        public string WhereCondition => "idUgovor = @idUgovor";
 
         /// <inheritdoc/>
-        public string? JoinTable => null;
+        public string? JoinTable => 
+            "JOIN Prodavac p ON u.idProdavac = p.idProdavac " +
+            "JOIN Kupac k ON u.idKupac = k.idKupac " +
+            "LEFT JOIN StavkaUgovora s ON u.idUgovor = s.idUgovor " +
+            "LEFT JOIN Automobil a ON s.idAutomobil = a.idAutomobil";
 
-        /// <inheritdoc/>
-        public string? JoinCondition => null;
 
         /// <inheritdoc/>
         public List<SqlParameter> GetInsertParameters()
@@ -95,8 +105,8 @@ namespace Common.Domain
                 new SqlParameter("@pdv", SqlDbType.Float) { Value = PDV },
                 new SqlParameter("@iznosBezPDV", SqlDbType.Float) { Value = IznosBezPDV },
                 new SqlParameter("@iznosSaPDV", SqlDbType.Float) { Value = IznosSaPDV },
-                new SqlParameter("@idProdavac", SqlDbType.Int) { Value = IdProdavac },
-                new SqlParameter("@idKupac", SqlDbType.Int) { Value = IdKupac }
+                new SqlParameter("@idProdavac", SqlDbType.Int) { Value = Prodavac.IdProdavac },
+                new SqlParameter("@idKupac", SqlDbType.Int) { Value = Kupac.IdKupac }
             };
         }
 
@@ -120,22 +130,38 @@ namespace Common.Domain
         /// <inheritdoc/>
         public List<IEntity> ReadEntities(DbDataReader reader)
         {
-            var ugovori = new List<IEntity>();
+            var ugovoriDict = new Dictionary<int, Ugovor>();
+
             while (reader.Read())
             {
-                ugovori.Add(new Ugovor
+                int idUgovor = Convert.ToInt32(reader["idUgovor"]);
+
+                if (!ugovoriDict.ContainsKey(idUgovor))
                 {
-                    IdUgovor = Convert.ToInt32(reader["idUgovor"]),
-                    Datum = Convert.ToDateTime(reader["datum"]),
-                    BrAutomobila = Convert.ToInt32(reader["brAutomobila"]),
-                    PDV = Convert.ToDouble(reader["pdv"]),
-                    IznosBezPDV = Convert.ToDouble(reader["iznosBezPDV"]),
-                    IznosSaPDV = Convert.ToDouble(reader["iznosSaPDV"]),
-                    IdProdavac = Convert.ToInt32(reader["idProdavac"]),
-                    IdKupac = Convert.ToInt32(reader["idKupac"])
-                });
+                    ugovoriDict[idUgovor] = new Ugovor
+                    {
+                        IdUgovor = idUgovor,
+                        Datum = Convert.ToDateTime(reader["datum"]),
+                        BrAutomobila = Convert.ToInt32(reader["brAutomobila"]),
+                        PDV = Convert.ToDouble(reader["pdv"]),
+                        IznosBezPDV = Convert.ToDouble(reader["iznosBezPDV"]),
+                        IznosSaPDV = Convert.ToDouble(reader["iznosSaPDV"]),
+                        Prodavac = new Prodavac
+                        {
+                            IdProdavac = Convert.ToInt32(reader["idProdavac"]),
+                            Ime = reader["ProdavacIme"].ToString()
+                        },
+                        Kupac = new Kupac
+                        {
+                            IdKupac = Convert.ToInt32(reader["idKupac"]),
+                            Email = reader["KupacEmail"].ToString()
+                        }
+                    };
+                }
+
             }
-            return ugovori;
+
+            return ugovoriDict.Values.Cast<IEntity>().ToList();
         }
 
         /// <inheritdoc/>
@@ -179,17 +205,41 @@ namespace Common.Domain
                 whereClause += " AND u.iznosSaPDV <= @iznosSaPDV";
                 parameters.Add(new SqlParameter("@iznosSaPDV", IznosSaPDV));
             }
-
-            if (IdProdavac > 0)
+            if (Prodavac != null)
             {
-                whereClause += " AND u.idProdavac = @idProdavac";
-                parameters.Add(new SqlParameter("@idProdavac", IdProdavac));
+                if (!string.IsNullOrEmpty(Prodavac.Ime))
+                {
+                    whereClause += " AND p.ime LIKE @prodavacIme";
+                    parameters.Add(new SqlParameter("@prodavacIme", $"%{Prodavac.Ime}%"));
+                }
             }
 
-            if (IdKupac > 0)
+            if (Kupac != null)
             {
-                whereClause += " AND u.idKupac = @idKupac";
-                parameters.Add(new SqlParameter("@idKupac", IdKupac));
+                if (Kupac.IdKupac > 0)
+                {
+                    whereClause += " AND u.IdKupac = @idKupac";
+                    parameters.Add(new SqlParameter("@idKupac", Kupac.IdKupac));
+                }
+                if (!string.IsNullOrEmpty(Kupac.Email))
+                {
+                    whereClause += " AND k.email LIKE @kupacEmail";
+                    parameters.Add(new SqlParameter("@kupacEmail", $"%{Kupac.Email}%"));
+                }
+            }
+
+
+            if (!string.IsNullOrWhiteSpace(Stavke?.Count > 0 ? Stavke[0].Automobil.Model : null))
+            {
+                whereClause += @" AND EXISTS (
+                        SELECT 1 
+                        FROM StavkaUgovora s2
+                        JOIN Automobil a2 ON s2.idAutomobil = a2.idAutomobil
+                        WHERE s2.idUgovor = u.idUgovor
+                        AND a2.model LIKE @automobilModel
+                     )";
+
+                parameters.Add(new SqlParameter("@automobilModel", $"%{Stavke[0].Automobil.Model}%"));
             }
 
             return (whereClause, parameters);

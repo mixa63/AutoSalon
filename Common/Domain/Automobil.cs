@@ -18,27 +18,27 @@ namespace Common.Domain
         public int IdAutomobil { get; set; }
 
         /// <summary>
-        /// Model automobila. Obavezan podatak.
+        /// Model automobila.
         /// </summary>
         public string Model { get; set; }
 
         /// <summary>
-        /// Opis opreme automobila. Obavezan podatak.
+        /// Opis opreme automobila.
         /// </summary>
         public string Oprema { get; set; }
 
         /// <summary>
-        /// Tip goriva koje automobil koristi (benzin, dizel, električni). Obavezan podatak.
+        /// Tip goriva koje automobil koristi (benzin, dizel, električni).
         /// </summary>
         public string TipGoriva { get; set; }
 
         /// <summary>
-        /// Boja automobila. Obavezan podatak.
+        /// Boja automobila.
         /// </summary>
         public string Boja { get; set; }
 
         /// <summary>
-        /// Cena automobila. Mora biti veća od 0.
+        /// Cena automobila.
         /// </summary>
         public double Cena { get; set; }
 
@@ -129,7 +129,7 @@ namespace Common.Domain
         public (string whereClause, List<SqlParameter> parameters) GetWhereClauseWithParameters()
         {
             var parameters = new List<SqlParameter>();
-            var whereClause = "1=1"; // Podrazumevani uslov
+            var whereClause = "1=1";
 
             if (IdAutomobil > 0)
             {

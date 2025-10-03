@@ -54,9 +54,6 @@ namespace Common.Domain
         /// <inheritdoc/>
         public string? JoinTable => null;
 
-        /// <inheritdoc/>
-        public string? JoinCondition => null;
-
         /// <summary>
         /// Kreira <see cref="SqlParameter"/> listu za INSERT upit.
         /// </summary>

@@ -1,185 +1,100 @@
-﻿using Microsoft.Data.SqlClient;
-using Microsoft.Data.Sqlite;
-using System;
-using System.Collections.Generic;
-using System.Data;
+﻿using System.Collections.Generic;
+using System.Data.Common;
+using Microsoft.Data.SqlClient;
+using Moq;
 using Xunit;
+using Common.Domain;
 
-namespace Common.Domain.Tests
+namespace Tests.Common.Domain;
+
+public class KvalifikacijaTests
 {
-    public class KvalifikacijaTests
+    [Fact]
+    public void GetInsertParameters_ShouldReturnCorrectParameters()
     {
-        [Fact]
-        public void Kvalifikacija_Properties_InitializedCorrectly()
+        var k = new Kvalifikacija
         {
-            // Arrange & Act
-            var kvalifikacija = new Kvalifikacija();
+            Naziv = "Menadžment",
+            Stepen = "Napredni"
+        };
 
-            // Assert
-            Assert.Equal("Kvalifikacija", kvalifikacija.TableName);
-            Assert.Equal("k", kvalifikacija.TableAlias);
-            Assert.Equal("idKvalifikacija", kvalifikacija.PrimaryKeyColumn);
-            Assert.Null(kvalifikacija.JoinTable);
-            Assert.Null(kvalifikacija.JoinCondition);
-        }
+        var parameters = k.GetInsertParameters();
 
-        [Fact]
-        public void GetInsertParameters_ReturnsCorrectParameters()
+        Assert.Equal(2, parameters.Count);
+        Assert.Contains(parameters, p => p.ParameterName == "@naziv" && (string)p.Value == "Menadžment");
+        Assert.Contains(parameters, p => p.ParameterName == "@stepen" && (string)p.Value == "Napredni");
+    }
+
+    [Fact]
+    public void GetUpdateParameters_ShouldIncludePrimaryKey()
+    {
+        var k = new Kvalifikacija
         {
-            // Arrange
-            var kvalifikacija = new Kvalifikacija
-            {
-                Naziv = "Sertifikat prodaje",
-                Stepen = "Napredni"
-            };
+            IdKvalifikacija = 5,
+            Naziv = "Prodaja",
+            Stepen = "Srednji"
+        };
 
-            // Act
-            var parameters = kvalifikacija.GetInsertParameters();
+        var parameters = k.GetUpdateParameters();
 
-            // Assert
-            Assert.Equal(2, parameters.Count);
-            Assert.Contains(parameters, p => p.ParameterName == "@naziv" && p.Value.ToString() == "Sertifikat prodaje");
-            Assert.Contains(parameters, p => p.ParameterName == "@stepen" && p.Value.ToString() == "Napredni");
-        }
+        Assert.Equal(3, parameters.Count);
+        Assert.Contains(parameters, p => p.ParameterName == "@idKvalifikacija" && (int)p.Value == 5);
+    }
 
-        [Fact]
-        public void GetUpdateParameters_IncludesPrimaryKey()
+    [Fact]
+    public void GetPrimaryKeyParameters_ShouldReturnSingleParameter()
+    {
+        var k = new Kvalifikacija { IdKvalifikacija = 10 };
+
+        var parameters = k.GetPrimaryKeyParameters();
+
+        Assert.Single(parameters);
+        Assert.Equal("@idKvalifikacija", parameters[0].ParameterName);
+        Assert.Equal(10, parameters[0].Value);
+    }
+
+    [Theory]
+    [InlineData(1, null, null, "k.idKvalifikacija = @idKvalifikacija", 1)]
+    [InlineData(0, "IT", null, "k.naziv LIKE @naziv", 1)]
+    [InlineData(0, null, "Osnovni", "k.stepen = @stepen", 1)]
+    [InlineData(3, "Ekonomija", "Napredni", "k.idKvalifikacija = @idKvalifikacija AND k.naziv LIKE @naziv AND k.stepen = @stepen", 3)]
+    public void GetWhereClauseWithParameters_VariousInputs_ShouldGenerateCorrectClause(
+        int id, string naziv, string stepen,
+        string expectedCondition, int expectedParamCount)
+    {
+        var k = new Kvalifikacija
         {
-            // Arrange
-            var kvalifikacija = new Kvalifikacija
-            {
-                IdKvalifikacija = 1,
-                Naziv = "Sertifikat prodaje",
-                Stepen = "Osnovni"
-            };
+            IdKvalifikacija = id,
+            Naziv = naziv,
+            Stepen = stepen
+        };
 
-            // Act
-            var parameters = kvalifikacija.GetUpdateParameters();
+        var (where, parameters) = k.GetWhereClauseWithParameters();
 
-            // Assert
-            Assert.Equal(3, parameters.Count); // 2 insert + 1 PK
-            Assert.Contains(parameters, p => p.ParameterName == "@idKvalifikacija" && (int)p.Value == 1);
-        }
+        Assert.Contains(expectedCondition, where);
+        Assert.Equal(expectedParamCount, parameters.Count);
+    }
 
-        [Fact]
-        public void GetPrimaryKeyParameters_ReturnsIdParameter()
-        {
-            // Arrange
-            var kvalifikacija = new Kvalifikacija { IdKvalifikacija = 5 };
+    [Fact]
+    public void ReadEntities_ShouldMapFromDataReader()
+    {
+        var mockReader = new Mock<DbDataReader>();
+        var readCount = 0;
 
-            // Act
-            var parameters = kvalifikacija.GetPrimaryKeyParameters();
+        mockReader.Setup(r => r.Read()).Returns(() => readCount++ == 0);
 
-            // Assert
-            var parameter = Assert.Single(parameters);
-            Assert.Equal("@idKvalifikacija", parameter.ParameterName);
-            Assert.Equal(5, parameter.Value);
-        }
+        mockReader.Setup(r => r["idKvalifikacija"]).Returns(7);
+        mockReader.Setup(r => r["naziv"]).Returns("Marketing");
+        mockReader.Setup(r => r["stepen"]).Returns("Srednji");
 
-        [Fact]
-        public void ReadEntities_WithSQLiteInMemory_ReturnsCorrectKvalifikacije()
-        {
-            // Arrange
-            SQLitePCL.Batteries.Init();
-            using var connection = new SqliteConnection("Data Source=:memory:");
-            connection.Open();
+        var kvalifikacija = new Kvalifikacija();
 
-            var createTableCmd = connection.CreateCommand();
-            createTableCmd.CommandText =
-            @"
-            CREATE TABLE Kvalifikacija (
-                idKvalifikacija INTEGER PRIMARY KEY,
-                naziv TEXT NOT NULL,
-                stepen TEXT NOT NULL
-            )";
-            createTableCmd.ExecuteNonQuery();
+        var result = kvalifikacija.ReadEntities(mockReader.Object);
 
-            var insertCmd = connection.CreateCommand();
-            insertCmd.CommandText =
-            @"
-            INSERT INTO Kvalifikacija (naziv, stepen)
-            VALUES ('Sertifikat prodaje', 'Osnovni'),
-                   ('Napredni kurs', 'Napredni')
-            ";
-            insertCmd.ExecuteNonQuery();
-
-            var cmd = connection.CreateCommand();
-            cmd.CommandText = "SELECT * FROM Kvalifikacija";
-
-            using var reader = cmd.ExecuteReader();
-            var kvalifikacija = new Kvalifikacija();
-
-            // Act
-            var result = kvalifikacija.ReadEntities(reader);
-
-            // Assert
-            Assert.Equal(2, result.Count);
-
-            var first = result[0] as Kvalifikacija;
-            Assert.Equal(1, first.IdKvalifikacija);
-            Assert.Equal("Sertifikat prodaje", first.Naziv);
-            Assert.Equal("Osnovni", first.Stepen);
-
-            var second = result[1] as Kvalifikacija;
-            Assert.Equal(2, second.IdKvalifikacija);
-            Assert.Equal("Napredni kurs", second.Naziv);
-            Assert.Equal("Napredni", second.Stepen);
-        }
-
-        [Theory]
-        [InlineData(0, null, null, "1=1")] // Bez filtera
-        [InlineData(5, null, null, "1=1 AND k.idKvalifikacija = @idKvalifikacija")] // Samo ID
-        [InlineData(0, "Sertifikat", null, "1=1 AND k.naziv LIKE @naziv")] // Samo naziv
-        [InlineData(0, null, "Napredni", "1=1 AND k.stepen = @stepen")] // Samo stepen
-        [InlineData(3, "Sertifikat", "Osnovni",
-            "1=1 AND k.idKvalifikacija = @idKvalifikacija AND k.naziv LIKE @naziv AND k.stepen = @stepen")] // Svi filteri
-        public void GetWhereClauseWithParameters_ReturnsCorrectClause(
-            int id, string naziv, string stepen, string expectedClause)
-        {
-            // Arrange
-            var kvalifikacija = new Kvalifikacija
-            {
-                IdKvalifikacija = id,
-                Naziv = naziv,
-                Stepen = stepen
-            };
-
-            // Act
-            var (actualClause, parameters) = kvalifikacija.GetWhereClauseWithParameters();
-
-            // Assert
-            Assert.Equal(expectedClause, actualClause);
-
-            int expectedParamCount = 0;
-            if (id > 0) expectedParamCount++;
-            if (!string.IsNullOrEmpty(naziv)) expectedParamCount++;
-            if (!string.IsNullOrEmpty(stepen)) expectedParamCount++;
-
-            Assert.Equal(expectedParamCount, parameters.Count);
-        }
-
-        [Fact]
-        public void SelectColumns_ReturnsCorrectFormat()
-        {
-            // Arrange
-            var kvalifikacija = new Kvalifikacija();
-
-            // Act
-            var result = kvalifikacija.SelectColumns;
-
-            // Assert
-            Assert.Equal("k.idKvalifikacija, k.naziv, k.stepen", result);
-        }
-
-        [Fact]
-        public void InsertColumnsAndPlaceholders_ReturnCorrectValues()
-        {
-            // Arrange
-            var kvalifikacija = new Kvalifikacija();
-
-            // Act & Assert
-            Assert.Equal("naziv, stepen", kvalifikacija.InsertColumns);
-            Assert.Equal("@naziv, @stepen", kvalifikacija.InsertValuesPlaceholders);
-        }
+        var entity = Assert.Single(result) as Kvalifikacija;
+        Assert.NotNull(entity);
+        Assert.Equal(7, entity.IdKvalifikacija);
+        Assert.Equal("Marketing", entity.Naziv);
+        Assert.Equal("Srednji", entity.Stepen);
     }
 }

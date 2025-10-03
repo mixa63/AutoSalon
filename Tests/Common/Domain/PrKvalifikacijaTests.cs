@@ -1,194 +1,126 @@
-﻿using Microsoft.Data.SqlClient;
-using Microsoft.Data.Sqlite;
+﻿using Common.Domain;
+using Microsoft.Data.SqlClient;
+using Moq;
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Data.Common;
 using Xunit;
 
-namespace Common.Domain.Tests
+namespace Tests.Common.Domain
 {
     public class PrKvalifikacijaTests
     {
         [Fact]
-        public void PrKvalifikacija_Properties_InitializedCorrectly()
+        public void GetInsertParameters_ShouldReturnCorrectParameters()
         {
-            // Arrange & Act
-            var pk = new PrKvalifikacija
-            {
-                Prodavac = new Prodavac(),
-                Kvalifikacija = new Kvalifikacija()
-            };
-
-            // Assert
-            Assert.Equal("PrKvalifikacija", pk.TableName);
-            Assert.Equal("pk", pk.TableAlias);
-            Assert.Equal("pk.idProdavac, pk.idKvalifikacija", pk.PrimaryKeyColumn);
-            Assert.Equal("Kvalifikacija k", pk.JoinTable);
-            Assert.Equal("pk.idKvalifikacija = k.idKvalifikacija", pk.JoinCondition);
-        }
-
-        [Fact]
-        public void GetInsertParameters_ReturnsCorrectParameters()
-        {
-            // Arrange
-            var pk = new PrKvalifikacija
+            var prk = new PrKvalifikacija
             {
                 Prodavac = new Prodavac { IdProdavac = 1 },
                 Kvalifikacija = new Kvalifikacija { IdKvalifikacija = 2 },
-                DatumIzdavanja = new DateTime(2025, 9, 23)
+                DatumIzdavanja = new DateTime(2023, 5, 1)
             };
 
-            // Act
-            var parameters = pk.GetInsertParameters();
+            var parameters = prk.GetInsertParameters();
 
-            // Assert
             Assert.Equal(3, parameters.Count);
-            Assert.Contains(parameters, p => p.ParameterName == "@idProdavac" && (int)p.Value == 1);
-            Assert.Contains(parameters, p => p.ParameterName == "@idKvalifikacija" && (int)p.Value == 2);
-            Assert.Contains(parameters, p => p.ParameterName == "@datumIzdavanja" && (DateTime)p.Value == new DateTime(2025, 9, 23));
+
+            Assert.Contains(parameters, p => p.ParameterName == "@idProdavac"
+                && p.SqlDbType == SqlDbType.Int
+                && (int)p.Value == 1);
+
+            Assert.Contains(parameters, p => p.ParameterName == "@idKvalifikacija"
+                && p.SqlDbType == SqlDbType.Int
+                && (int)p.Value == 2);
+
+            Assert.Contains(parameters, p => p.ParameterName == "@datumIzdavanja"
+                && p.SqlDbType == SqlDbType.Date
+                && (DateTime)p.Value == new DateTime(2023, 5, 1));
         }
 
         [Fact]
-        public void GetUpdateParameters_ReturnsSameAsInsert()
+        public void GetUpdateParameters_ShouldReturnSameAsInsertParameters()
         {
-            // Arrange
-            var pk = new PrKvalifikacija
+            var prk = new PrKvalifikacija
             {
-                Prodavac = new Prodavac { IdProdavac = 1 },
-                Kvalifikacija = new Kvalifikacija { IdKvalifikacija = 2 },
-                DatumIzdavanja = new DateTime(2025, 9, 23)
+                Prodavac = new Prodavac { IdProdavac = 3 },
+                Kvalifikacija = new Kvalifikacija { IdKvalifikacija = 4 },
+                DatumIzdavanja = new DateTime(2024, 1, 1)
             };
 
-            // Act
-            var parameters = pk.GetUpdateParameters();
+            var updateParams = prk.GetUpdateParameters();
+            var insertParams = prk.GetInsertParameters();
 
-            // Assert
-            Assert.Equal(3, parameters.Count);
+            Assert.Equal(insertParams.Count, updateParams.Count);
+            for (int i = 0; i < insertParams.Count; i++)
+            {
+                Assert.Equal(insertParams[i].ParameterName, updateParams[i].ParameterName);
+                Assert.Equal(insertParams[i].Value, updateParams[i].Value);
+            }
         }
 
         [Fact]
-        public void GetPrimaryKeyParameters_ReturnsBothKeys()
+        public void GetPrimaryKeyParameters_ShouldReturnCorrectPKParams()
         {
-            // Arrange
-            var pk = new PrKvalifikacija
+            var prk = new PrKvalifikacija
             {
-                Prodavac = new Prodavac { IdProdavac = 1 },
-                Kvalifikacija = new Kvalifikacija { IdKvalifikacija = 2 }
+                Prodavac = new Prodavac { IdProdavac = 10 },
+                Kvalifikacija = new Kvalifikacija { IdKvalifikacija = 20 }
             };
 
-            // Act
-            var parameters = pk.GetPrimaryKeyParameters();
+            var pkParams = prk.GetPrimaryKeyParameters();
 
-            // Assert
-            Assert.Equal(2, parameters.Count);
-            Assert.Contains(parameters, p => p.ParameterName == "@idProdavac" && (int)p.Value == 1);
-            Assert.Contains(parameters, p => p.ParameterName == "@idKvalifikacija" && (int)p.Value == 2);
+            Assert.Equal(2, pkParams.Count);
+
+            Assert.Contains(pkParams, p => p.ParameterName == "@idProdavac"
+                && (int)p.Value == 10);
+
+            Assert.Contains(pkParams, p => p.ParameterName == "@idKvalifikacija"
+                && (int)p.Value == 20);
         }
 
         [Fact]
-        public void ReadEntities_WithSQLiteInMemory_ReturnsCorrectPrKvalifikacija()
+        public void ReadEntities_ShouldMapReaderToEntities()
         {
-            // Arrange
-            SQLitePCL.Batteries.Init();
-            using var connection = new SqliteConnection("Data Source=:memory:");
-            connection.Open();
+            var mockReader = new Mock<DbDataReader>();
+            var sequence = new Queue<bool>(new[] { true, false });
+            mockReader.Setup(r => r.Read()).Returns(() => sequence.Dequeue());
 
-            var createTableCmd = connection.CreateCommand();
-            createTableCmd.CommandText =
-            @"
-            CREATE TABLE PrKvalifikacija (
-                idProdavac INTEGER NOT NULL,
-                idKvalifikacija INTEGER NOT NULL,
-                datumIzdavanja DATE NOT NULL
-            )";
-            createTableCmd.ExecuteNonQuery();
+            mockReader.Setup(r => r["idProdavac"]).Returns(5);
+            mockReader.Setup(r => r["idKvalifikacija"]).Returns(6);
+            mockReader.Setup(r => r["datumIzdavanja"]).Returns(new DateTime(2022, 12, 31));
 
-            var insertCmd = connection.CreateCommand();
-            insertCmd.CommandText =
-            @"
-            INSERT INTO PrKvalifikacija (idProdavac, idKvalifikacija, datumIzdavanja)
-            VALUES (1, 10, '2025-09-23'),
-                   (2, 20, '2025-09-24')
-            ";
-            insertCmd.ExecuteNonQuery();
+            var prk = new PrKvalifikacija();
 
-            var cmd = connection.CreateCommand();
-            cmd.CommandText = "SELECT * FROM PrKvalifikacija";
+            var result = prk.ReadEntities(mockReader.Object);
 
-            using var reader = cmd.ExecuteReader();
-            var pk = new PrKvalifikacija();
-
-            // Act
-            var result = pk.ReadEntities(reader);
-
-            // Assert
-            Assert.Equal(2, result.Count);
-
-            var first = result[0] as PrKvalifikacija;
-            Assert.Equal(1, first.Prodavac.IdProdavac);
-            Assert.Equal(10, first.Kvalifikacija.IdKvalifikacija);
-            Assert.Equal(new DateTime(2025, 9, 23), first.DatumIzdavanja);
-
-            var second = result[1] as PrKvalifikacija;
-            Assert.Equal(2, second.Prodavac.IdProdavac);
-            Assert.Equal(20, second.Kvalifikacija.IdKvalifikacija);
-            Assert.Equal(new DateTime(2025, 9, 24), second.DatumIzdavanja);
+            Assert.Single(result);
+            var entity = Assert.IsType<PrKvalifikacija>(result[0]);
+            Assert.Equal(5, entity.Prodavac.IdProdavac);
+            Assert.Equal(6, entity.Kvalifikacija.IdKvalifikacija);
+            Assert.Equal(new DateTime(2022, 12, 31), entity.DatumIzdavanja);
         }
 
         [Theory]
-        [InlineData(0, 0, "0001-01-01", "1=1")] // Bez filtera
-        [InlineData(1, 0, "0001-01-01", "1=1 AND pk.idProdavac = @idProdavac")] // Samo idProdavac
-        [InlineData(0, 2, "0001-01-01", "1=1 AND pk.idKvalifikacija = @idKvalifikacija")] // Samo idKvalifikacija
-        [InlineData(0, 0, "2025-09-23", "1=1 AND pk.datumIzdavanja = @datumIzdavanja")] // Samo datum
-        [InlineData(1, 2, "2025-09-23", "1=1 AND pk.idProdavac = @idProdavac AND pk.idKvalifikacija = @idKvalifikacija AND pk.datumIzdavanja = @datumIzdavanja")] // Svi filteri
-        public void GetWhereClauseWithParameters_ReturnsCorrectClause(
-            int idProdavac, int idKvalifikacija, string datumString, string expectedClause)
+        [InlineData(1, 2, "2023-05-01", "1=1 AND pk.idProdavac = @idProdavac AND pk.idKvalifikacija = @idKvalifikacija AND pk.datumIzdavanja = @datumIzdavanja", 3)]
+        [InlineData(0, 2, "0001-01-01", "1=1 AND pk.idKvalifikacija = @idKvalifikacija", 1)]
+        [InlineData(1, 0, "0001-01-01", "1=1 AND pk.idProdavac = @idProdavac", 1)]
+        [InlineData(0, 0, "2024-01-01", "1=1 AND pk.datumIzdavanja = @datumIzdavanja", 1)]
+        [InlineData(0, 0, "0001-01-01", "1=1", 0)]
+        public void GetWhereClauseWithParameters_ShouldBuildCorrectClause(int idProdavac, int idKvalifikacija, string datum, string expectedClause, int expectedParamCount)
         {
-            // Arrange
-            var datum = DateTime.Parse(datumString);
-            var pk = new PrKvalifikacija
+            var prk = new PrKvalifikacija
             {
                 Prodavac = new Prodavac { IdProdavac = idProdavac },
                 Kvalifikacija = new Kvalifikacija { IdKvalifikacija = idKvalifikacija },
-                DatumIzdavanja = datum
+                DatumIzdavanja = DateTime.Parse(datum)
             };
 
-            // Act
-            var (actualClause, parameters) = pk.GetWhereClauseWithParameters();
+            var (whereClause, parameters) = prk.GetWhereClauseWithParameters();
 
-            // Assert
-            Assert.Equal(expectedClause, actualClause);
-
-            int expectedParamCount = 0;
-            if (idProdavac > 0) expectedParamCount++;
-            if (idKvalifikacija > 0) expectedParamCount++;
-            if (datum != DateTime.MinValue) expectedParamCount++;
-
+            Assert.Equal(expectedClause, whereClause);
             Assert.Equal(expectedParamCount, parameters.Count);
         }
 
-        [Fact]
-        public void SelectColumns_ReturnsCorrectFormat()
-        {
-            // Arrange
-            var pk = new PrKvalifikacija();
-
-            // Act
-            var result = pk.SelectColumns;
-
-            // Assert
-            Assert.Equal("pk.idProdavac, pk.idKvalifikacija, pk.datumIzdavanja", result);
-        }
-
-        [Fact]
-        public void InsertColumnsAndPlaceholders_ReturnCorrectValues()
-        {
-            // Arrange
-            var pk = new PrKvalifikacija();
-
-            // Act & Assert
-            Assert.Equal("idProdavac, idKvalifikacija, datumIzdavanja", pk.InsertColumns);
-            Assert.Equal("@idProdavac, @idKvalifikacija, @datumIzdavanja", pk.InsertValuesPlaceholders);
-        }
     }
 }

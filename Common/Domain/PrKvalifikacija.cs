@@ -54,10 +54,9 @@ namespace Common.Domain
         public string WhereCondition => $"{TableAlias}.idProdavac = @idProdavac AND {TableAlias}.idKvalifikacija = @idKvalifikacija";
 
         /// <inheritdoc/>
-        public string? JoinTable => "Kvalifikacija k";
+        public string? JoinTable => "JOIN Kvalifikacija k ON " +
+            $"{TableAlias}.idKvalifikacija = k.idKvalifikacija";
 
-        /// <inheritdoc/>
-        public string? JoinCondition => $"{TableAlias}.idKvalifikacija = k.idKvalifikacija";
 
         /// <inheritdoc/>
         public List<SqlParameter> GetInsertParameters()
@@ -74,7 +73,7 @@ namespace Common.Domain
         public List<SqlParameter> GetUpdateParameters()
         {
             var parameters = GetInsertParameters();
-            return parameters; // IdProdavac i IdKvalifikacija su primarni ključevi i već su uključeni
+            return parameters;
         }
 
         /// <inheritdoc/>

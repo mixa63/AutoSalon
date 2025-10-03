@@ -24,37 +24,34 @@ namespace Common.Domain
         public string Email { get; set; }
 
         /// <inheritdoc/>
-        public string TableName => "Kupac";
+        public virtual string TableName => "Kupac";
 
         /// <inheritdoc/>
-        public string TableAlias => "k";
+        public virtual string TableAlias => "k";
 
         /// <inheritdoc/>
-        public string PrimaryKeyColumn => "k.idKupac";
+        public virtual string PrimaryKeyColumn => "k.idKupac";
 
         /// <inheritdoc/>
-        public string SelectColumns => "k.idKupac, k.email";
+        public virtual string SelectColumns => "k.idKupac, k.email";
 
         /// <inheritdoc/>
-        public string InsertColumns => "email";
+        public virtual string InsertColumns => "email";
 
         /// <inheritdoc/>
-        public string InsertValuesPlaceholders => "@email";
+        public virtual string InsertValuesPlaceholders => "@email";
 
         /// <inheritdoc/>
-        public string UpdateSetClause => "email = @email";
+        public virtual string UpdateSetClause => "email = @email";
 
         /// <inheritdoc/>
-        public string WhereCondition => "k.idKupac = @idKupac";
+        public virtual string WhereCondition => "idKupac = @idKupac";
 
         /// <inheritdoc/>
-        public string? JoinTable => null;
+        public virtual string? JoinTable => null;
 
         /// <inheritdoc/>
-        public string? JoinCondition => null;
-
-        /// <inheritdoc/>
-        public List<SqlParameter> GetInsertParameters()
+        public virtual List<SqlParameter> GetInsertParameters()
         {
             return new List<SqlParameter>
             {
@@ -63,7 +60,7 @@ namespace Common.Domain
         }
 
         /// <inheritdoc/>
-        public List<SqlParameter> GetUpdateParameters()
+        public virtual List<SqlParameter> GetUpdateParameters()
         {
             var parameters = GetInsertParameters();
             parameters.Add(new SqlParameter("@idKupac", SqlDbType.Int) { Value = IdKupac });
@@ -71,7 +68,7 @@ namespace Common.Domain
         }
 
         /// <inheritdoc/>
-        public List<SqlParameter> GetPrimaryKeyParameters()
+        public virtual List<SqlParameter> GetPrimaryKeyParameters()
         {
             return new List<SqlParameter>
             {
@@ -80,7 +77,7 @@ namespace Common.Domain
         }
 
         /// <inheritdoc/>
-        public List<IEntity> ReadEntities(DbDataReader reader)
+        public virtual List<IEntity> ReadEntities(DbDataReader reader)
         {
             var kupci = new List<IEntity>();
             while (reader.Read())
@@ -95,7 +92,7 @@ namespace Common.Domain
         }
 
         /// <inheritdoc/>
-        public (string whereClause, List<SqlParameter> parameters) GetWhereClauseWithParameters()
+        public virtual (string whereClause, List<SqlParameter> parameters) GetWhereClauseWithParameters()
         {
             var parameters = new List<SqlParameter>();
             var whereClause = "1=1";
@@ -108,8 +105,8 @@ namespace Common.Domain
 
             if (!string.IsNullOrEmpty(Email))
             {
-                whereClause += " AND k.email = @email";
-                parameters.Add(new SqlParameter("@email", Email));
+                whereClause += " AND k.email LIKE @email";
+                parameters.Add(new SqlParameter("@email", $"%{Email}%"));
             }
 
             return (whereClause, parameters);

@@ -1,21 +1,23 @@
 ﻿using Microsoft.Data.SqlClient;
 using Common.Domain;
+using System;
+using System.Collections.Generic;
 using System.Data.Common;
 
 namespace DBBroker
 {
     /// <summary>
     /// Glavna broker klasa zadužena za komunikaciju sa bazom podataka.
-    /// Pruža CRUD operacije i druge usluge za rad sa IEntity objektima.
+    /// Pruža CRUD operacije i druge metode za rad sa <see cref="IEntity"/> objektima.
     /// </summary>
-    public class Broker
+    public class Broker : IBroker
     {
-        private DBConnection connection;
+        private readonly DBConnection connection;
 
         /// <summary>
         /// Konstruktor koji inicijalizuje broker sa zadatim connection string-om.
         /// </summary>
-        /// <param name="connectionString">Connection string za bazu podataka</param>
+        /// <param name="connectionString">Connection string za bazu podataka.</param>
         public Broker(string connectionString)
         {
             connection = new DBConnection(connectionString);
@@ -38,7 +40,7 @@ namespace DBBroker
         }
 
         /// <summary>
-        /// Počinje novu transakciju.
+        /// Počinje novu transakciju nad bazom.
         /// </summary>
         public void BeginTransaction()
         {
@@ -46,7 +48,7 @@ namespace DBBroker
         }
 
         /// <summary>
-        /// Potvrđuje transakciju.
+        /// Potvrđuje aktivnu transakciju.
         /// </summary>
         public void Commit()
         {
@@ -54,7 +56,7 @@ namespace DBBroker
         }
 
         /// <summary>
-        /// Poništava transakciju.
+        /// Poništava aktivnu transakciju.
         /// </summary>
         public void Rollback()
         {
@@ -64,10 +66,10 @@ namespace DBBroker
         /// <summary>
         /// Dodaje novi entitet u bazu podataka.
         /// </summary>
-        /// <param name="entity">Entitet za čuvanje</param>
+        /// <param name="entity">Entitet koji treba dodati.</param>
         public void Add(IEntity entity)
         {
-            SqlCommand cmd = connection.CreateCommand();
+            using SqlCommand cmd = connection.CreateCommand();
             cmd.CommandText = $"INSERT INTO {entity.TableName} ({entity.InsertColumns}) VALUES ({entity.InsertValuesPlaceholders})";
 
             foreach (SqlParameter param in entity.GetInsertParameters())
@@ -76,41 +78,40 @@ namespace DBBroker
             }
 
             cmd.ExecuteNonQuery();
-            cmd.Dispose();
         }
 
         /// <summary>
-        /// Dodaje novi entitet i vraća generisani ID.
+        /// Dodaje novi entitet u bazu i vraća generisani ID primarnog ključa.
         /// </summary>
-        /// <param name="entity">Entitet za čuvanje</param>
-        /// <returns>Generisani ID novog zapisa</returns>
+        /// <param name="entity">Entitet koji treba dodati.</param>
+        /// <returns>Generisani ID novog zapisa u bazi.</returns>
         public int AddWithReturnId(IEntity entity)
         {
             using SqlCommand cmd = connection.CreateCommand();
 
-            // Izdvojiti čisto ime primarnog ključa (bez aliasa)
-            string pkColumn = entity.PrimaryKeyColumn;
-            if (pkColumn.Contains('.'))
-                pkColumn = pkColumn.Split('.')[1];
+            // Izdvajanje čiste kolone primarnog ključa
+            string pkColumn = entity.PrimaryKeyColumn.Contains(".")
+                ? entity.PrimaryKeyColumn.Split('.')[1]
+                : entity.PrimaryKeyColumn;
 
-            cmd.CommandText = $"INSERT INTO {entity.TableName} ({entity.InsertColumns}) OUTPUT INSERTED.{pkColumn} VALUES ({entity.InsertValuesPlaceholders})";
+            cmd.CommandText = $"INSERT INTO {entity.TableName} ({entity.InsertColumns}) " +
+                              $"OUTPUT INSERTED.{pkColumn} VALUES ({entity.InsertValuesPlaceholders})";
 
             foreach (SqlParameter param in entity.GetInsertParameters())
             {
                 cmd.Parameters.Add(param);
             }
 
-            int id = (int)cmd.ExecuteScalar();
-            return id;
+            return (int)cmd.ExecuteScalar();
         }
 
         /// <summary>
         /// Ažurira postojeći entitet u bazi podataka.
         /// </summary>
-        /// <param name="entity">Entitet za ažuriranje</param>
+        /// <param name="entity">Entitet koji treba ažurirati.</param>
         public void Update(IEntity entity)
         {
-            SqlCommand cmd = connection.CreateCommand();
+            using SqlCommand cmd = connection.CreateCommand();
             cmd.CommandText = $"UPDATE {entity.TableName} SET {entity.UpdateSetClause} WHERE {entity.WhereCondition}";
 
             foreach (SqlParameter param in entity.GetUpdateParameters())
@@ -120,16 +121,15 @@ namespace DBBroker
             }
 
             cmd.ExecuteNonQuery();
-            cmd.Dispose();
         }
 
         /// <summary>
-        /// Briše entitet iz baze podataka.
+        /// Briše entitet iz baze podataka na osnovu primarnog ključa.
         /// </summary>
-        /// <param name="entity">Entitet za brisanje</param>
+        /// <param name="entity">Entitet koji treba obrisati.</param>
         public void Delete(IEntity entity)
         {
-            SqlCommand cmd = connection.CreateCommand();
+            using SqlCommand cmd = connection.CreateCommand();
             cmd.CommandText = $"DELETE FROM {entity.TableName} WHERE {entity.WhereCondition}";
 
             foreach (SqlParameter param in entity.GetPrimaryKeyParameters())
@@ -138,23 +138,18 @@ namespace DBBroker
             }
 
             cmd.ExecuteNonQuery();
-            cmd.Dispose();
         }
 
         /// <summary>
-        /// Vraća sve zapise za dati entitet.
+        /// Vraća sve zapise iz baze za dati entitet.
         /// </summary>
-        /// <param name="entity">Entitet za pretragu</param>
-        /// <returns>Lista entiteta</returns>
+        /// <param name="entity">Entitet za pretragu.</param>
+        /// <returns>Lista svih entiteta tipa <see cref="IEntity"/>.</returns>
         public List<IEntity> GetAll(IEntity entity)
         {
             using SqlCommand cmd = connection.CreateCommand();
 
-            string joinClause = "";
-            if (!string.IsNullOrEmpty(entity.JoinTable) && !string.IsNullOrEmpty(entity.JoinCondition))
-            {
-                joinClause = $" JOIN {entity.JoinTable} ON {entity.JoinCondition}";
-            }
+            string joinClause = string.IsNullOrEmpty(entity.JoinTable) ? "" : $" {entity.JoinTable}";
 
             cmd.CommandText = $"SELECT {entity.SelectColumns} FROM {entity.TableName} {entity.TableAlias}{joinClause}";
 
@@ -163,21 +158,16 @@ namespace DBBroker
         }
 
         /// <summary>
-        /// Vraća entitete na osnovu zadatih uslova.
+        /// Vraća entitete iz baze koji zadovoljavaju zadate kriterijume.
         /// </summary>
-        /// <param name="entity">Entitet sa popunjenim kriterijumima za pretragu</param>
-        /// <returns>Lista pronađenih entiteta</returns>
+        /// <param name="entity">Entitet sa postavljenim kriterijumima.</param>
+        /// <returns>Lista pronađenih entiteta.</returns>
         public List<IEntity> GetByCondition(IEntity entity)
         {
             using SqlCommand cmd = connection.CreateCommand();
 
             var (whereClause, parameters) = entity.GetWhereClauseWithParameters();
-
-            string joinClause = "";
-            if (!string.IsNullOrEmpty(entity.JoinTable) && !string.IsNullOrEmpty(entity.JoinCondition))
-            {
-                joinClause = $" JOIN {entity.JoinTable} ON {entity.JoinCondition}";
-            }
+            string joinClause = string.IsNullOrEmpty(entity.JoinTable) ? "" : $" {entity.JoinTable}";
 
             cmd.CommandText = $"SELECT {entity.SelectColumns} FROM {entity.TableName} {entity.TableAlias}{joinClause} WHERE {whereClause}";
 
@@ -191,29 +181,23 @@ namespace DBBroker
         }
 
         /// <summary>
-        /// Vraća prvi ID za dati entitet (za sortirane upite).
+        /// Vraća prvi primarni ključ za dati entitet, ili -1 ako entitet ne postoji.
         /// </summary>
-        /// <param name="entity">Entitet za pretragu</param>
-        /// <returns>Prvi ID ili -1 ako nije pronađen</returns>
+        /// <param name="entity">Entitet za pretragu.</param>
+        /// <returns>Prvi ID ili -1 ako nije pronađen.</returns>
         public int GetFirstId(IEntity entity)
         {
             using SqlCommand cmd = connection.CreateCommand();
 
-            // Izdvojiti čisto ime primarnog ključa (bez aliasa)
-            string pkColumn = entity.PrimaryKeyColumn;
-            if (pkColumn.Contains('.'))
-                pkColumn = pkColumn.Split('.')[1];
+            string pkColumn = entity.PrimaryKeyColumn.Contains(".")
+                ? entity.PrimaryKeyColumn.Split('.')[1]
+                : entity.PrimaryKeyColumn;
 
             cmd.CommandText = $"SELECT TOP 1 {pkColumn} FROM {entity.TableName} ORDER BY {pkColumn}";
 
             object result = cmd.ExecuteScalar();
 
-            if (result != null && result != DBNull.Value)
-            {
-                return Convert.ToInt32(result);
-            }
-
-            return -1;
+            return (result != null && result != DBNull.Value) ? Convert.ToInt32(result) : -1;
         }
     }
 }

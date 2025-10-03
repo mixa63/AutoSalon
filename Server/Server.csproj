@@ -16,6 +16,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Common\Common.csproj" />
+    <ProjectReference Include="..\DBBroker\DBBroker.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -37,6 +38,14 @@
     <None Update="config.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="SystemOperations\KupacSO\" />
+    <Folder Include="SystemOperations\KvalifikacijaSO\" />
+    <Folder Include="SystemOperations\AutomobilSO\" />
+    <Folder Include="SystemOperations\ProdavacSO\" />
+    <Folder Include="SystemOperations\UgovorSO\" />
   </ItemGroup>
 
 </Project>

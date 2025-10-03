@@ -1,167 +1,140 @@
-﻿using Microsoft.Data.Sqlite;
+﻿using Common.Domain;
+using Microsoft.Data.SqlClient;
+using Moq;
+using System.Collections.Generic;
+using System.Data;
+using System.Data.Common;
 using Xunit;
 
-namespace Common.Domain.Tests
+namespace Tests.Common.Domain
 {
     public class PravnoLiceTests
     {
         [Fact]
-        public void PravnoLice_Properties_InitializedCorrectly()
+        public void GetInsertParameters_ShouldReturnCorrectParameters()
         {
-            // Arrange & Act
-            var pravno = new PravnoLice();
-
-            // Assert
-            Assert.Equal("PravnoLice", pravno.TableName);
-            Assert.Equal("pl", pravno.TableAlias);
-            Assert.Equal("pl.idKupac", pravno.PrimaryKeyColumn);
-            Assert.Null(pravno.JoinTable);
-            Assert.Null(pravno.JoinCondition);
-        }
-
-        [Fact]
-        public void GetInsertParameters_ReturnsCorrectParameters()
-        {
-            // Arrange
-            var pravno = new PravnoLice
+            var pl = new PravnoLice
             {
-                Kupac = new Kupac { IdKupac = 1 },
-                NazivFirme = "Firma DOO",
-                PIB = 123456,
+                IdKupac = 1,
+                NazivFirme = "TestFirma",
+                PIB = "123456789",
                 MaticniBroj = "987654321"
             };
 
-            // Act
-            var parameters = pravno.GetInsertParameters();
+            var parameters = pl.GetInsertParameters();
 
-            // Assert
             Assert.Equal(4, parameters.Count);
-            Assert.Contains(parameters, p => p.ParameterName == "@idKupac" && (int)p.Value == 1);
-            Assert.Contains(parameters, p => p.ParameterName == "@nazivFirme" && (string)p.Value == "Firma DOO");
-            Assert.Contains(parameters, p => p.ParameterName == "@pib" && (int)p.Value == 123456);
-            Assert.Contains(parameters, p => p.ParameterName == "@maticniBroj" && (string)p.Value == "987654321");
+
+            Assert.Contains(parameters, p => p.ParameterName == "@idKupac"
+                && p.SqlDbType == SqlDbType.Int
+                && (int)p.Value == 1);
+
+            Assert.Contains(parameters, p => p.ParameterName == "@nazivFirme"
+                && p.SqlDbType == SqlDbType.NVarChar
+                && (string)p.Value == "TestFirma");
+
+            Assert.Contains(parameters, p => p.ParameterName == "@pib"
+                && p.SqlDbType == SqlDbType.NVarChar
+                && (string)p.Value == "123456789");
+
+            Assert.Contains(parameters, p => p.ParameterName == "@maticniBroj"
+                && p.SqlDbType == SqlDbType.NVarChar
+                && (string)p.Value == "987654321");
         }
 
         [Fact]
-        public void GetUpdateParameters_IncludesPrimaryKey()
+        public void GetUpdateParameters_ShouldReturnCorrectParameters()
         {
-            // Arrange
-            var pravno = new PravnoLice
+            var pl = new PravnoLice
             {
-                Kupac = new Kupac { IdKupac = 1 },
-                NazivFirme = "UpdateFirma",
-                PIB = 654321,
-                MaticniBroj = "111222333"
+                IdKupac = 2,
+                NazivFirme = "FirmaX",
+                PIB = "PIB999",
+                MaticniBroj = "MB123"
             };
 
-            // Act
-            var parameters = pravno.GetUpdateParameters();
+            var parameters = pl.GetUpdateParameters();
 
-            // Assert
             Assert.Equal(4, parameters.Count);
-            Assert.Contains(parameters, p => p.ParameterName == "@idKupac" && (int)p.Value == 1);
+
+            Assert.Contains(parameters, p => p.ParameterName == "@nazivFirme"
+                && p.SqlDbType == SqlDbType.NVarChar
+                && (string)p.Value == "FirmaX");
+
+            Assert.Contains(parameters, p => p.ParameterName == "@pib"
+                && p.SqlDbType == SqlDbType.NVarChar
+                && (string)p.Value == "PIB999");
+
+            Assert.Contains(parameters, p => p.ParameterName == "@maticniBroj"
+                && p.SqlDbType == SqlDbType.NVarChar
+                && (string)p.Value == "MB123");
+
+            Assert.Contains(parameters, p => p.ParameterName == "@idKupac"
+                && p.SqlDbType == SqlDbType.Int
+                && (int)p.Value == 2);
         }
 
         [Fact]
-        public void GetPrimaryKeyParameters_ReturnsIdParameter()
+        public void GetPrimaryKeyParameters_ShouldReturnIdKupacParameter()
         {
-            // Arrange
-            var pravno = new PravnoLice
-            {
-                Kupac = new Kupac { IdKupac = 5 }
-            };
+            var pl = new PravnoLice { IdKupac = 5 };
 
-            // Act
-            var parameters = pravno.GetPrimaryKeyParameters();
+            var parameters = pl.GetPrimaryKeyParameters();
 
-            // Assert
-            var parameter = Assert.Single(parameters);
-            Assert.Equal("@idKupac", parameter.ParameterName);
-            Assert.Equal(5, parameter.Value);
+            Assert.Single(parameters);
+            Assert.Equal("@idKupac", parameters[0].ParameterName);
+            Assert.Equal(SqlDbType.Int, parameters[0].SqlDbType);
+            Assert.Equal(5, parameters[0].Value);
         }
 
         [Fact]
-        public void ReadEntities_WithSQLiteInMemory_ReturnsCorrectPravnaLica()
+        public void ReadEntities_ShouldReturnListOfPravnoLice()
         {
-            // Arrange
-            SQLitePCL.Batteries.Init();
-            using var connection = new SqliteConnection("Data Source=:memory:");
-            connection.Open();
+            var mockReader = new Mock<DbDataReader>();
+            var sequence = new Queue<bool>(new[] { true, false });
+            mockReader.Setup(r => r.Read()).Returns(() => sequence.Dequeue());
 
-            var createTableCmd = connection.CreateCommand();
-            createTableCmd.CommandText =
-            @"
-            CREATE TABLE PravnoLice (
-                idKupac INTEGER PRIMARY KEY,
-                nazivFirme TEXT NOT NULL,
-                pib INTEGER NOT NULL,
-                maticniBroj TEXT NOT NULL
-            )";
-            createTableCmd.ExecuteNonQuery();
+            mockReader.Setup(r => r["idKupac"]).Returns(10);
+            mockReader.Setup(r => r["email"]).Returns("firma@mail.com");
+            mockReader.Setup(r => r["nazivFirme"]).Returns("FirmaTest");
+            mockReader.Setup(r => r["pib"]).Returns("PIB123");
+            mockReader.Setup(r => r["maticniBroj"]).Returns("MB999");
 
-            var insertCmd = connection.CreateCommand();
-            insertCmd.CommandText =
-            @"
-            INSERT INTO PravnoLice (idKupac, nazivFirme, pib, maticniBroj)
-            VALUES (1, 'Firma1', 123, 'MB1'),
-                   (2, 'Firma2', 456, 'MB2')
-            ";
-            insertCmd.ExecuteNonQuery();
+            var pl = new PravnoLice();
 
-            var cmd = connection.CreateCommand();
-            cmd.CommandText = "SELECT * FROM PravnoLice";
+            var result = pl.ReadEntities(mockReader.Object);
 
-            using var reader = cmd.ExecuteReader();
-            var pravno = new PravnoLice();
-
-            // Act
-            var result = pravno.ReadEntities(reader);
-
-            // Assert
-            Assert.Equal(2, result.Count);
-
-            var first = result[0] as PravnoLice;
-            Assert.Equal(1, first.Kupac.IdKupac);
-            Assert.Equal("Firma1", first.NazivFirme);
-            Assert.Equal(123, first.PIB);
-            Assert.Equal("MB1", first.MaticniBroj);
-
-            var second = result[1] as PravnoLice;
-            Assert.Equal(2, second.Kupac.IdKupac);
-            Assert.Equal("Firma2", second.NazivFirme);
+            Assert.Single(result);
+            var entity = Assert.IsType<PravnoLice>(result[0]);
+            Assert.Equal(10, entity.IdKupac);
+            Assert.Equal("firma@mail.com", entity.Email);
+            Assert.Equal("FirmaTest", entity.NazivFirme);
+            Assert.Equal("PIB123", entity.PIB);
+            Assert.Equal("MB999", entity.MaticniBroj);
         }
 
         [Theory]
-        [InlineData(0, null, 0, null, "1=1")]
-        [InlineData(1, null, 0, null, "1=1 AND pl.idKupac = @idKupac")]
-        [InlineData(0, "FirmaX", 0, null, "1=1 AND pl.nazivFirme LIKE @nazivFirme")]
-        [InlineData(0, null, 123456, null, "1=1 AND pl.pib = @pib")]
-        [InlineData(0, null, 0, "MB123", "1=1 AND pl.maticniBroj = @maticniBroj")]
-        [InlineData(2, "FirmaY", 654321, "MB987", "1=1 AND pl.idKupac = @idKupac AND pl.nazivFirme LIKE @nazivFirme AND pl.pib = @pib AND pl.maticniBroj = @maticniBroj")]
-        public void GetWhereClauseWithParameters_ReturnsCorrectClause(int idKupac, string naziv, int pib, string maticni, string expectedClause)
+        [InlineData(0, "FirmaTest", "PIB123", "MB999", "1=1 AND pl.nazivFirme LIKE @nazivFirme AND pl.pib = @pib AND pl.maticniBroj = @maticniBroj", 3)]
+        [InlineData(5, "", "", "", "1=1 AND pl.idKupac = @idKupac", 1)]
+        [InlineData(7, "FirmaY", "", "", "1=1 AND pl.idKupac = @idKupac AND pl.nazivFirme LIKE @nazivFirme", 2)]
+        [InlineData(0, "", "PIB555", "", "1=1 AND pl.pib = @pib", 1)]
+        [InlineData(0, "", "", "MB777", "1=1 AND pl.maticniBroj = @maticniBroj", 1)]
+        [InlineData(0, "", "", "", "1=1", 0)]
+        public void GetWhereClauseWithParameters_ShouldBuildCorrectClause(int idKupac, string nazivFirme, string pib, string maticniBroj, string expectedClause, int expectedParamCount)
         {
-            // Arrange
-            var pravno = new PravnoLice
+            var pl = new PravnoLice
             {
-                Kupac = new Kupac { IdKupac = idKupac },
-                NazivFirme = naziv,
+                IdKupac = idKupac,
+                NazivFirme = nazivFirme,
                 PIB = pib,
-                MaticniBroj = maticni
+                MaticniBroj = maticniBroj
             };
 
-            // Act
-            var (actualClause, parameters) = pravno.GetWhereClauseWithParameters();
-
-            // Assert
-            Assert.Equal(expectedClause, actualClause);
-
-            int expectedParamCount = 0;
-            if (idKupac > 0) expectedParamCount++;
-            if (!string.IsNullOrEmpty(naziv)) expectedParamCount++;
-            if (pib > 0) expectedParamCount++;
-            if (!string.IsNullOrEmpty(maticni)) expectedParamCount++;
-
+            var (whereClause, parameters) = pl.GetWhereClauseWithParameters();
+             
+            Assert.Equal(expectedClause, whereClause);
             Assert.Equal(expectedParamCount, parameters.Count);
         }
+
     }
 }
