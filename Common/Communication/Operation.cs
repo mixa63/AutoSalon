@@ -11,6 +11,21 @@ namespace Common.Communication
     /// </summary>
     public enum Operation
     {
-        None
+        None,
+        KreirajUgovor,
+        PretraziUgovor,
+        VratiListuUgovor,
+        PromeniUgovor,
+        KreirajKupac,
+        PretraziKupac,
+        VratiListuKupac,
+        PromeniKupac,
+        ObrisiKupac,
+        UbaciKvalifikacija,
+        VratiListuSviKvalifikacija,
+        PrijaviProdavac,
+        VratiListuSviProdavac,
+        VratiListuSviKupac,
+        VratiListuSviAutomobil
     }
 }
