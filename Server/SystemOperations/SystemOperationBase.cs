@@ -1,7 +1,7 @@
 ﻿using DBBroker;
 using ServerApp;
 
-namespace Server.SystemOperations
+namespace ServerApp.SystemOperations
 {
     /// <summary>
     /// Apstraktna bazna klasa koja definise zajednicki template za izvrsavanje sistemskih operacija.
@@ -12,7 +12,7 @@ namespace Server.SystemOperations
         /// <summary>
         /// Broker za rad sa bazom podataka.
         /// </summary>
-        protected Broker broker;
+        protected IBroker broker;
 
         /// <summary>
         /// Konstruktor koji inicijalizuje broker sa connection string-om iz ConfigManager-a.
