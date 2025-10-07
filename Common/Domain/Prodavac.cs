@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
+using System.Text.Json.Serialization;
 
 namespace Common.Domain
 {
@@ -12,20 +13,112 @@ namespace Common.Domain
     /// </summary>
     public class Prodavac : IEntity
     {
+        private bool isLoading = false;
+        private string _ime;
+        private string _prezime;
+        private string _username;
+        private string _password;
+        /// <summary>
+        /// Podrazumevani konstruktor.
+        /// </summary>
+        public Prodavac() { }
+
+        /// <summary>
+        /// Konstruktor koji koristi System.Text.Json tokom deserializacije.
+        /// Postavlja zastavicu za privremeno isključivanje validacije u setterima.
+        /// </summary>
+        [JsonConstructor]
+        public Prodavac(int idProdavac, string ime, string prezime, string username, string password)
+        {
+            this.IdProdavac = idProdavac;
+            this._ime = ime;
+            this._prezime = prezime;
+            this._username = username;
+            this._password = password;
+        }
+
         /// <summary>Jedinstveni identifikator prodavca (primarni ključ).</summary>
         public int IdProdavac { get; set; }
 
-        /// <summary>Ime prodavca.</summary>
-        public string Ime { get; set; }
+        /// <summary>
+        /// Ime prodavca. Ne sme biti prazno ili null.
+        /// </summary>
+        /// <exception cref="ArgumentException">Baca se kada se pokuša postaviti prazan string, null ili string koji se sastoji samo od belina.</exception>
+        public string Ime
+        {
+            get => _ime;
+            set
+            {
+                if (!isLoading)
+                {
+                    if (string.IsNullOrWhiteSpace(value))
+                    {
+                        throw new ArgumentException("Ime prodavca ne sme biti prazno.", nameof(Ime));
+                    }
+                }
+                _ime = value;
+            }
+        }
 
-        /// <summary>Prezime prodavca.</summary>
-        public string Prezime { get; set; }
+        /// <summary>
+        /// Prezime prodavca. Ne sme biti prazno ili null.
+        /// </summary>
+        /// <exception cref="ArgumentException">Baca se kada se pokuša postaviti prazan string, null ili string koji se sastoji samo od belina.</exception>
+        public string Prezime
+        {
+            get => _prezime;
+            set
+            {
+                if (!isLoading)
+                {
+                    if (string.IsNullOrWhiteSpace(value))
+                    {
+                        throw new ArgumentException("Prezime prodavca ne sme biti prazno.", nameof(Prezime));
+                    }
+                }
+                _prezime = value;
+            }
+        }
 
-        /// <summary>Korisničko ime (username) za prijavu prodavca.</summary>
-        public string Username { get; set; }
+        /// <summary>
+        /// Korisničko ime (username) za prijavu prodavca. Ne sme biti prazno ili null.
+        /// </summary>
+        /// <exception cref="ArgumentException">Baca se kada se pokuša postaviti prazan string, null ili string koji se sastoji samo od belina.</exception>
+        public string Username
+        {
+            get => _username;
+            set
+            {
+                if (!isLoading)
+                {
+                    if (string.IsNullOrWhiteSpace(value))
+                    {
+                        throw new ArgumentException("Korisničko ime ne sme biti prazno.", nameof(Username));
+                    }
+                }
+                _username = value;
+            }
+        }
 
-        /// <summary>Lozinka prodavca.</summary>
-        public string Password { get; set; }
+        /// <summary>
+        /// Lozinka prodavca. Ne sme biti prazna ili null.
+        /// </summary>
+        /// <exception cref="ArgumentException">Baca se kada se pokuša postaviti prazan string, null ili string koji se sastoji samo od belina.</exception>
+        public string Password
+        {
+            get => _password;
+            set
+            {
+                if (!isLoading)
+                {
+                    if (string.IsNullOrWhiteSpace(value))
+                    {
+                        throw new ArgumentException("Lozinka ne sme biti prazna.", nameof(Password));
+                    }
+                }
+                _password = value;
+            }
+        }
 
         /// <inheritdoc/>
         public string TableName => "Prodavac";
@@ -107,6 +200,7 @@ namespace Common.Domain
             {
                 list.Add(new Prodavac
                 {
+                    isLoading = true,
                     IdProdavac = Convert.ToInt32(reader["idProdavac"]),
                     Ime = reader["ime"]?.ToString(),
                     Prezime = reader["prezime"]?.ToString(),

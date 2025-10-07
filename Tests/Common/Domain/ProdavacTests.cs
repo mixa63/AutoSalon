@@ -12,6 +12,82 @@ namespace Tests.Common.Domain
     public class ProdavacTests
     {
         [Fact]
+        public void Ime_SetWithValidValue_SetsProperty()
+        {
+            var prodavac = new Prodavac();
+            const string validIme = "Marko";
+            prodavac.Ime = validIme;
+            Assert.Equal(validIme, prodavac.Ime);
+        }
+
+        [Theory]
+        [InlineData(null)]
+        [InlineData("")]
+        [InlineData("   ")]
+        public void Ime_SetWithInvalidValue_ThrowsArgumentException(string invalidIme)
+        {
+            var prodavac = new Prodavac();
+            Assert.Throws<ArgumentException>(() => prodavac.Ime = invalidIme);
+        }
+
+        [Fact]
+        public void Prezime_SetWithValidValue_SetsProperty()
+        {
+            var prodavac = new Prodavac();
+            const string validPrezime = "Markovic";
+            prodavac.Prezime = validPrezime;
+            Assert.Equal(validPrezime, prodavac.Prezime);
+        }
+
+        [Theory]
+        [InlineData(null)]
+        [InlineData("")]
+        [InlineData("   ")]
+        public void Prezime_SetWithInvalidValue_ThrowsArgumentException(string invalidPrezime)
+        {
+            var prodavac = new Prodavac();
+            Assert.Throws<ArgumentException>(() => prodavac.Prezime = invalidPrezime);
+        }
+
+        [Fact]
+        public void Username_SetWithValidValue_SetsProperty()
+        {
+            var prodavac = new Prodavac();
+            const string validUsername = "marko123";
+            prodavac.Username = validUsername;
+            Assert.Equal(validUsername, prodavac.Username);
+        }
+
+        [Theory]
+        [InlineData(null)]
+        [InlineData("")]
+        [InlineData("   ")]
+        public void Username_SetWithInvalidValue_ThrowsArgumentException(string invalidUsername)
+        {
+            var prodavac = new Prodavac();
+            Assert.Throws<ArgumentException>(() => prodavac.Username = invalidUsername);
+        }
+
+        [Fact]
+        public void Password_SetWithValidValue_SetsProperty()
+        {
+            var prodavac = new Prodavac();
+            const string validPassword = "password123";
+            prodavac.Password = validPassword;
+            Assert.Equal(validPassword, prodavac.Password);
+        }
+
+        [Theory]
+        [InlineData(null)]
+        [InlineData("")]
+        [InlineData("   ")]
+        public void Password_SetWithInvalidValue_ThrowsArgumentException(string invalidPassword)
+        {
+            var prodavac = new Prodavac();
+            Assert.Throws<ArgumentException>(() => prodavac.Password = invalidPassword);
+        }
+
+        [Fact]
         public void GetInsertParameters_ShouldReturnCorrectParameters()
         {
             var prodavac = new Prodavac
@@ -96,14 +172,7 @@ namespace Tests.Common.Domain
         [InlineData(0, "", "", "", "", "1=1", 0)]
         public void GetWhereClauseWithParameters_ShouldBuildCorrectClause(int idProdavac, string ime, string prezime, string username, string password, string expectedClause, int expectedParamCount)
         {
-            var prodavac = new Prodavac
-            {
-                IdProdavac = idProdavac,
-                Ime = ime,
-                Prezime = prezime,
-                Username = username,
-                Password = password
-            };
+            var prodavac = new Prodavac(idProdavac,ime, prezime, username, password);
 
             var (whereClause, parameters) = prodavac.GetWhereClauseWithParameters();
 
