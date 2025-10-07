@@ -8,6 +8,100 @@ namespace Tests.Common.Domain;
 
 public class AutomobilTests
 {
+
+    [Fact]
+    public void Model_SetWithValidValue_SetsProperty()
+    {
+        var automobil = new Automobil();
+        const string validModel = "Audi A4";
+        automobil.Model = validModel;
+        Assert.Equal(validModel, automobil.Model);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void Model_SetWithInvalidValue_ThrowsArgumentException(string invalidModel)
+    {
+        var automobil = new Automobil();
+        Assert.Throws<ArgumentException>(() => automobil.Model = invalidModel);
+    }
+
+    [Fact]
+    public void Oprema_SetWithValidValue_SetsProperty()
+    {
+        var automobil = new Automobil();
+        const string validOprema = "Full Package";
+        automobil.Oprema = validOprema;
+        Assert.Equal(validOprema, automobil.Oprema);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void Oprema_SetWithInvalidValue_ThrowsArgumentException(string invalidOprema)
+    {
+        var automobil = new Automobil();
+        Assert.Throws<ArgumentException>(() => automobil.Oprema = invalidOprema);
+    }
+
+    [Fact]
+    public void TipGoriva_SetWithValidValue_SetsProperty()
+    {
+        var automobil = new Automobil();
+        const string validTipGoriva = "Diesel";
+        automobil.TipGoriva = validTipGoriva;
+        Assert.Equal(validTipGoriva, automobil.TipGoriva);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void TipGoriva_SetWithInvalidValue_ThrowsArgumentException(string invalidTipGoriva)
+    {
+        var automobil = new Automobil();
+        Assert.Throws<ArgumentException>(() => automobil.TipGoriva = invalidTipGoriva);
+    }
+
+    [Fact]
+    public void Boja_SetWithValidValue_SetsProperty()
+    {
+        var automobil = new Automobil();
+        const string validBoja = "Black";
+        automobil.Boja = validBoja;
+        Assert.Equal(validBoja, automobil.Boja);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void Boja_SetWithInvalidValue_ThrowsArgumentException(string invalidBoja)
+    {
+        var automobil = new Automobil();
+        Assert.Throws<ArgumentException>(() => automobil.Boja = invalidBoja);
+    }
+
+    [Theory]
+    [InlineData(15000.50)]
+    [InlineData(0)]
+    public void Cena_SetWithValidValue_SetsProperty(double validCena)
+    {
+        var automobil = new Automobil();
+        automobil.Cena = validCena;
+        Assert.Equal(validCena, automobil.Cena);
+    }
+
+    [Fact]
+    public void Cena_SetWithNegativeValue_ThrowsArgumentException()
+    {
+        var automobil = new Automobil();
+        Assert.Throws<ArgumentException>(() => automobil.Cena = -100);
+    }
+
     [Fact]
     public void GetInsertParameters_ShouldReturnCorrectParameters()
     {
@@ -72,14 +166,7 @@ public class AutomobilTests
         int id, string model, string tipGoriva, string boja, double cena,
         string expectedCondition, int expectedParamCount)
     {
-        var auto = new Automobil
-        {
-            IdAutomobil = id,
-            Model = model,
-            TipGoriva = tipGoriva,
-            Boja = boja,
-            Cena = cena
-        };
+        var auto = new Automobil(id, model, null, tipGoriva, boja, cena);
 
         var (where, parameters) = auto.GetWhereClauseWithParameters();
 
