@@ -42,7 +42,7 @@ namespace ServerApp.SystemOperations.KupacSO
         /// </remarks>
         protected override void ExecuteConcreteOperation()
         {
-            var fizickoLiceCriteria = new FizickoLice { IdKupac = criteria.IdKupac, Email = criteria.Email };
+            var fizickoLiceCriteria = new FizickoLice { IdKupac = criteria.IdKupac };
             var pronadjenaFizickaLica = broker.GetByCondition(fizickoLiceCriteria).ConvertAll(x => (FizickoLice)x);
 
             if (pronadjenaFizickaLica != null && pronadjenaFizickaLica.Count > 0)
@@ -51,7 +51,7 @@ namespace ServerApp.SystemOperations.KupacSO
                 return;
             }
 
-            var pravnoLiceCriteria = new PravnoLice { IdKupac = criteria.IdKupac, Email = criteria.Email };
+            var pravnoLiceCriteria = new PravnoLice { IdKupac = criteria.IdKupac };
             var pronadjenaPravnaLica = broker.GetByCondition(pravnoLiceCriteria).ConvertAll(x => (PravnoLice)x);
 
             if (pronadjenaPravnaLica != null && pronadjenaPravnaLica.Count > 0)

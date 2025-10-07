@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
+using System.Text.Json.Serialization;
 
 namespace Common.Domain
 {
@@ -12,20 +13,67 @@ namespace Common.Domain
     /// </summary>
     public class Kvalifikacija : IEntity
     {
+        private bool isLoading = false;
+        private string _naziv;
+        private string _stepen;
+
+        /// <summary>Podrazumevani konstruktor.</summary>
+        public Kvalifikacija() { }
+
+        /// <summary>Konstruktor za JSON deserializaciju.</summary>
+        [JsonConstructor]
+        public Kvalifikacija(int idKvalifikacija, string naziv, string stepen)
+        {
+            this.IdKvalifikacija = idKvalifikacija;
+            this._naziv = naziv;
+            this._stepen = stepen;
+        }
+
         /// <summary>
         /// Jedinstveni identifikator kvalifikacije. Primarni ključ u bazi podataka.
         /// </summary>
         public int IdKvalifikacija { get; set; }
 
         /// <summary>
-        /// Naziv kvalifikacije.
+        /// Naziv kvalifikacije. Ne sme biti prazan string ili null.
         /// </summary>
-        public string Naziv { get; set; }
+        /// <exception cref="ArgumentException">Baca se kada se pokuša postaviti prazan string, null ili string koji se sastoji samo od belina.</exception>
+        public string Naziv
+        {
+            get => _naziv;
+            set
+            {
+                if (!isLoading)
+                {
+                    if (string.IsNullOrWhiteSpace(value))
+                    {
+                        throw new ArgumentException("Naziv kvalifikacije ne sme biti prazan string.", nameof(Naziv));
+                    }
+                }
+                _naziv = value;
+            }
+        }
 
         /// <summary>
-        /// Stepen ili nivo kvalifikacije ("Osnovni", "Srednji", "Napredni").
+        /// Stepen ili nivo kvalifikacije. Ne sme biti prazan string ili null.
         /// </summary>
-        public string Stepen { get; set; }
+        /// <value>String koji označava nivo kvalifikacije (npr. "Osnovni", "Srednji", "Napredni").</value>
+        /// <exception cref="ArgumentException">Baca se kada se pokuša postaviti prazan string, null ili string koji se sastoji samo od belina.</exception>
+        public string Stepen
+        {
+            get => _stepen;
+            set
+            {
+                if (!isLoading)
+                {
+                    if (string.IsNullOrWhiteSpace(value))
+                    {
+                        throw new ArgumentException("Stepen kvalifikacije ne sme biti prazan string.", nameof(Stepen));
+                    }
+                }
+                _stepen = value;
+            }
+        }
 
         /// <inheritdoc/>
         public string TableName => "Kvalifikacija";
@@ -104,6 +152,7 @@ namespace Common.Domain
             {
                 list.Add(new Kvalifikacija
                 {
+                    isLoading = true,
                     IdKvalifikacija = Convert.ToInt32(reader["idKvalifikacija"]),
                     Naziv = reader["naziv"]?.ToString() ?? string.Empty,
                     Stepen = reader["stepen"]?.ToString() ?? string.Empty

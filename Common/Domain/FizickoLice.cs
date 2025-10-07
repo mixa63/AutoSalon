@@ -3,6 +3,8 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
+using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
 
 namespace Common.Domain
 {
@@ -12,25 +14,121 @@ namespace Common.Domain
     /// </summary>
     public class FizickoLice : Kupac
     {
-        /// <summary>
-        /// Ime fizičkog lica.
-        /// </summary>
-        public string Ime { get; set; }
+        private bool isLoading = false;
+        private string _ime;
+        private string _prezime;
+        private string _telefon;
+        private string _jmbg;
+
+        /// <summary>Podrazumevani konstruktor.</summary>
+        public FizickoLice() { }
+
+        /// <summary>Konstruktor za JSON deserializaciju.</summary>
+        [JsonConstructor]
+        public FizickoLice(int idKupac, string email, string ime, string prezime, string telefon, string jmbg) : base(idKupac, email)
+        {
+            this._ime = ime;
+            this._prezime = prezime;
+            this._telefon = telefon;
+            this._jmbg = jmbg;
+        }
 
         /// <summary>
-        /// Prezime fizičkog lica.
+        /// Ime fizičkog lica. Ne sme biti prazno ili null.
         /// </summary>
-        public string Prezime { get; set; }
+        /// <exception cref="ArgumentException">Baca se kada se pokuša postaviti prazan string, null ili string koji se sastoji samo od belina.</exception>
+        public string Ime
+        {
+            get => _ime;
+            set
+            {
+                if (!isLoading)
+                {
+                    if (string.IsNullOrWhiteSpace(value))
+                    {
+                        throw new ArgumentException("Ime fizičkog lica ne sme biti prazno.", nameof(Ime));
+                    }
+                }
+                _ime = value;
+            }
+        }
 
         /// <summary>
-        /// Broj telefona.
+        /// Prezime fizičkog lica. Ne sme biti prazno ili null.
         /// </summary>
-        public string Telefon { get; set; }
+        /// <exception cref="ArgumentException">Baca se kada se pokuša postaviti prazan string, null ili string koji se sastoji samo od belina.</exception>
+        public string Prezime
+        {
+            get => _prezime;
+            set
+            {
+                if (!isLoading)
+                {
+                    if (string.IsNullOrWhiteSpace(value))
+                    {
+                        throw new ArgumentException("Prezime fizičkog lica ne sme biti prazno.", nameof(Prezime));
+                    }
+                }
+                _prezime = value;
+            }
+        }
 
         /// <summary>
-        /// Jedinstveni matični broj građana (JMBG).
+        /// Broj telefona. Ne sme biti prazan string ili null.
         /// </summary>
-        public string JMBG { get; set; }
+        /// <value>String koji predstavlja broj telefona kupca u proizvoljnom formatu.</value>
+        /// <exception cref="ArgumentException">Baca se kada se pokuša postaviti prazan string, null ili string koji se sastoji samo od belina.</exception>
+        public string Telefon
+        {
+            get => _telefon;
+            set
+            {
+                if (!isLoading)
+                {
+                    if (string.IsNullOrWhiteSpace(value))
+                    {
+                        throw new ArgumentException("Telefon ne sme biti prazan string ili null.", nameof(Telefon));
+                    }
+                }
+                _telefon = value;
+            }
+        }
+
+        /// <summary>
+        /// Jedinstveni matični broj građana (JMBG). Ne sme biti prazan ili null i mora biti sastavljen samo od brojeva.
+        /// </summary>
+        /// <value>String od tačno 13 cifara koji predstavlja jedinstveni matični broj građana.</value>
+        /// <exception cref="ArgumentException">Baca se u sledećim slučajevima:
+        /// - Kada se pokuša postaviti prazan string ili null
+        /// - Kada string sadrži ne-numeričke karaktere
+        /// - Kada string nema tačno 13 karaktera</exception>
+        public string JMBG
+        {
+            get => _jmbg;
+            set
+            {
+                if (!isLoading)
+                {
+                    if (string.IsNullOrWhiteSpace(value))
+                    {
+                        throw new ArgumentException("JMBG ne sme biti prazan.", nameof(JMBG));
+                    }
+
+                    
+                    if (!Regex.IsMatch(value, @"^\d+$"))
+                    {
+                        throw new ArgumentException("JMBG mora sadržati samo numeričke vrednosti (brojeve).", nameof(JMBG));
+                    }
+
+                    
+                    if (value.Length != 13)
+                    {
+                         throw new ArgumentException("JMBG mora imati tačno 13 cifara.", nameof(JMBG));
+                    }
+                }
+                _jmbg = value;
+            }
+        }
 
         /// <inheritdoc/>
         public override string TableName => "FizickoLice";
@@ -102,6 +200,7 @@ namespace Common.Domain
             {
                 fizickaLica.Add(new FizickoLice
                 {
+                    isLoading = true,
                     IdKupac = Convert.ToInt32(reader["idKupac"]),
                     Email = reader["email"].ToString(),
                     Ime = reader["ime"].ToString(),

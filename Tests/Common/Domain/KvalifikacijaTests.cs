@@ -9,6 +9,45 @@ namespace Tests.Common.Domain;
 
 public class KvalifikacijaTests
 {
+
+    [Fact]
+    public void Naziv_SetWithValidValue_SetsProperty()
+    {
+        var kvalifikacija = new Kvalifikacija();
+        const string validNaziv = "Napredni prodavac";
+        kvalifikacija.Naziv = validNaziv;
+        Assert.Equal(validNaziv, kvalifikacija.Naziv);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void Naziv_SetWithInvalidValue_ThrowsArgumentException(string invalidNaziv)
+    {
+        var kvalifikacija = new Kvalifikacija();
+        Assert.Throws<ArgumentException>(() => kvalifikacija.Naziv = invalidNaziv);
+    }
+
+    [Fact]
+    public void Stepen_SetWithValidValue_SetsProperty()
+    {
+        var kvalifikacija = new Kvalifikacija();
+        const string validStepen = "III";
+        kvalifikacija.Stepen = validStepen;
+        Assert.Equal(validStepen, kvalifikacija.Stepen);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void Stepen_SetWithInvalidValue_ThrowsArgumentException(string invalidStepen)
+    {
+        var kvalifikacija = new Kvalifikacija();
+        Assert.Throws<ArgumentException>(() => kvalifikacija.Stepen = invalidStepen);
+    }
+
     [Fact]
     public void GetInsertParameters_ShouldReturnCorrectParameters()
     {
@@ -62,12 +101,7 @@ public class KvalifikacijaTests
         int id, string naziv, string stepen,
         string expectedCondition, int expectedParamCount)
     {
-        var k = new Kvalifikacija
-        {
-            IdKvalifikacija = id,
-            Naziv = naziv,
-            Stepen = stepen
-        };
+        var k = new Kvalifikacija(id, naziv, stepen);
 
         var (where, parameters) = k.GetWhereClauseWithParameters();
 

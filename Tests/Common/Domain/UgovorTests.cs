@@ -11,6 +11,139 @@ namespace Tests.Common.Domain
     public class UgovorTests
     {
         [Fact]
+        public void Datum_SetWithValidValue_SetsProperty()
+        {
+            var ugovor = new Ugovor();
+            var validDatum = DateTime.Now;
+            ugovor.Datum = validDatum;
+            Assert.Equal(validDatum, ugovor.Datum);
+        }
+
+        [Fact]
+        public void Datum_SetWithMinValue_ThrowsArgumentOutOfRangeException()
+        {
+            var ugovor = new Ugovor();
+            Assert.Throws<ArgumentOutOfRangeException>(() => ugovor.Datum = DateTime.MinValue);
+        }
+
+        [Fact]
+        public void BrAutomobila_SetWithValidValue_SetsProperty()
+        {
+            var ugovor = new Ugovor();
+            const int validBr = 5;
+            ugovor.BrAutomobila = validBr;
+            Assert.Equal(validBr, ugovor.BrAutomobila);
+        }
+
+        [Theory]
+        [InlineData(0)]
+        [InlineData(-1)]
+        public void BrAutomobila_SetWithInvalidValue_ThrowsArgumentOutOfRangeException(int invalidBr)
+        {
+            var ugovor = new Ugovor();
+            Assert.Throws<ArgumentOutOfRangeException>(() => ugovor.BrAutomobila = invalidBr);
+        }
+
+        [Theory]
+        [InlineData(0)]
+        [InlineData(0.2)]
+        public void PDV_SetWithValidValue_SetsProperty(double validPdv)
+        {
+            var ugovor = new Ugovor();
+            ugovor.PDV = validPdv;
+            Assert.Equal(validPdv, ugovor.PDV);
+        }
+
+        [Fact]
+        public void PDV_SetWithNegativeValue_ThrowsArgumentOutOfRangeException()
+        {
+            var ugovor = new Ugovor();
+            Assert.Throws<ArgumentOutOfRangeException>(() => ugovor.PDV = -0.1);
+        }
+
+        [Theory]
+        [InlineData(0)]
+        [InlineData(50000)]
+        public void IznosBezPDV_SetWithValidValue_SetsProperty(double validIznos)
+        {
+            var ugovor = new Ugovor();
+            ugovor.IznosBezPDV = validIznos;
+            Assert.Equal(validIznos, ugovor.IznosBezPDV);
+        }
+
+        [Fact]
+        public void IznosBezPDV_SetWithNegativeValue_ThrowsArgumentOutOfRangeException()
+        {
+            var ugovor = new Ugovor();
+            Assert.Throws<ArgumentOutOfRangeException>(() => ugovor.IznosBezPDV = -1);
+        }
+
+        [Theory]
+        [InlineData(0)]
+        [InlineData(60000)]
+        public void IznosSaPDV_SetWithValidValue_SetsProperty(double validIznos)
+        {
+            var ugovor = new Ugovor();
+            ugovor.IznosSaPDV = validIznos;
+            Assert.Equal(validIznos, ugovor.IznosSaPDV);
+        }
+
+        [Fact]
+        public void IznosSaPDV_SetWithNegativeValue_ThrowsArgumentOutOfRangeException()
+        {
+            var ugovor = new Ugovor();
+            Assert.Throws<ArgumentOutOfRangeException>(() => ugovor.IznosSaPDV = -1);
+        }
+
+        [Fact]
+        public void Prodavac_SetWithValidValue_SetsProperty()
+        {
+            var ugovor = new Ugovor();
+            var validProdavac = new Prodavac();
+            ugovor.Prodavac = validProdavac;
+            Assert.Equal(validProdavac, ugovor.Prodavac);
+        }
+
+        [Fact]
+        public void Prodavac_SetWithNull_ThrowsArgumentNullException()
+        {
+            var ugovor = new Ugovor();
+            Assert.Throws<ArgumentNullException>(() => ugovor.Prodavac = null);
+        }
+
+        [Fact]
+        public void Kupac_SetWithValidValue_SetsProperty()
+        {
+            var ugovor = new Ugovor();
+            var validKupac = new Kupac();
+            ugovor.Kupac = validKupac;
+            Assert.Equal(validKupac, ugovor.Kupac);
+        }
+
+        [Fact]
+        public void Kupac_SetWithNull_ThrowsArgumentNullException()
+        {
+            var ugovor = new Ugovor();
+            Assert.Throws<ArgumentNullException>(() => ugovor.Kupac = null);
+        }
+
+        [Fact]
+        public void Stavke_SetWithValidValue_SetsProperty()
+        {
+            var ugovor = new Ugovor();
+            var validStavke = new List<StavkaUgovora>();
+            ugovor.Stavke = validStavke;
+            Assert.Equal(validStavke, ugovor.Stavke);
+        }
+
+        [Fact]
+        public void Stavke_SetWithNull_ThrowsArgumentNullException()
+        {
+            var ugovor = new Ugovor();
+            Assert.Throws<ArgumentNullException>(() => ugovor.Stavke = null);
+        }
+
+        [Fact]
         public void GetInsertParameters_ShouldReturnCorrectSqlParameters()
         {
             var ugovor = new Ugovor
@@ -93,19 +226,19 @@ namespace Tests.Common.Domain
             DateTime datum = string.IsNullOrEmpty(datumStr) ? DateTime.MinValue : DateTime.Parse(datumStr);
 
             var ugovor = new Ugovor
-            {
-                IdUgovor = idUgovor,
-                Datum = datum,
-                BrAutomobila = brAutomobila,
-                PDV = pdv,
-                IznosBezPDV = iznosBezPdv,
-                IznosSaPDV = iznosSaPdv,
-                Prodavac = new Prodavac { Ime = prodavacIme },
-                Kupac = new Kupac { Email = kupacEmail },
-                Stavke = string.IsNullOrEmpty(modelAutomobila)
+            (
+                idUgovor,
+                datum,
+                brAutomobila,
+                pdv,
+                iznosBezPdv,
+                iznosSaPdv,
+                new Prodavac(-1, prodavacIme, null, null, null),
+                new Kupac(-1,kupacEmail),
+                string.IsNullOrEmpty(modelAutomobila)
                     ? new List<StavkaUgovora>()
                     : new List<StavkaUgovora> { new StavkaUgovora { Automobil = new Automobil { Model = modelAutomobila } } }
-            };
+            );
 
             var (whereClause, parameters) = ugovor.GetWhereClauseWithParameters();
 

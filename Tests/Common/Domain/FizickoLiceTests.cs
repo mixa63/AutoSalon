@@ -9,6 +9,85 @@ namespace Tests.Common.Domain;
 public class FizickoLiceTests
 {
     [Fact]
+    public void Ime_SetWithValidValue_SetsProperty()
+    {
+        var fizickoLice = new FizickoLice();
+        const string validIme = "Pera";
+        fizickoLice.Ime = validIme;
+        Assert.Equal(validIme, fizickoLice.Ime);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void Ime_SetWithInvalidValue_ThrowsArgumentException(string invalidIme)
+    {
+        var fizickoLice = new FizickoLice();
+        Assert.Throws<ArgumentException>(() => fizickoLice.Ime = invalidIme);
+    }
+
+    [Fact]
+    public void Prezime_SetWithValidValue_SetsProperty()
+    {
+        var fizickoLice = new FizickoLice();
+        const string validPrezime = "Peric";
+        fizickoLice.Prezime = validPrezime;
+        Assert.Equal(validPrezime, fizickoLice.Prezime);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void Prezime_SetWithInvalidValue_ThrowsArgumentException(string invalidPrezime)
+    {
+        var fizickoLice = new FizickoLice();
+        Assert.Throws<ArgumentException>(() => fizickoLice.Prezime = invalidPrezime);
+    }
+
+    [Fact]
+    public void Telefon_SetWithValidValue_SetsProperty()
+    {
+        var fizickoLice = new FizickoLice();
+        const string validTelefon = "064123456";
+        fizickoLice.Telefon = validTelefon;
+        Assert.Equal(validTelefon, fizickoLice.Telefon);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void Telefon_SetWithInvalidValue_ThrowsArgumentException(string invalidTelefon)
+    {
+        var fizickoLice = new FizickoLice();
+        Assert.Throws<ArgumentException>(() => fizickoLice.Telefon = invalidTelefon);
+    }
+
+    [Fact]
+    public void JMBG_SetWithValidValue_SetsProperty()
+    {
+        var fizickoLice = new FizickoLice();
+        const string validJMBG = "1234567890123";
+        fizickoLice.JMBG = validJMBG;
+        Assert.Equal(validJMBG, fizickoLice.JMBG);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("123456789012")]
+    [InlineData("12345678901234")]
+    [InlineData("123456789012a")]
+    public void JMBG_SetWithInvalidValue_ThrowsArgumentException(string invalidJMBG)
+    {
+        var fizickoLice = new FizickoLice();
+        Assert.Throws<ArgumentException>(() => fizickoLice.JMBG = invalidJMBG);
+    }
+
+    [Fact]
     public void GetInsertParameters_ShouldReturnCorrectParameters()
     {
         var fl = new FizickoLice
@@ -69,14 +148,8 @@ public class FizickoLiceTests
         int id, string ime, string prezime, string telefon, string jmbg,
         string expectedCondition, int expectedParamCount)
     {
-        var fl = new FizickoLice
-        {
-            IdKupac = id,
-            Ime = ime,
-            Prezime = prezime,
-            Telefon = telefon,
-            JMBG = jmbg
-        };
+        var fl = new FizickoLice(id, null, ime, prezime, telefon, jmbg);
+        
 
         var (where, parameters) = fl.GetWhereClauseWithParameters();
 

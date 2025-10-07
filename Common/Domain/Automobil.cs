@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
+using System.Text.Json.Serialization;
 
 namespace Common.Domain
 {
@@ -12,35 +13,135 @@ namespace Common.Domain
     /// </summary>
     public class Automobil : IEntity
     {
+        private bool isLoading = false;
+        private string _model;
+        private string _oprema;
+        private string _tipGoriva;
+        private string _boja;
+        private double _cena;
+
+        /// <summary>Podrazumevani konstruktor.</summary>
+        public Automobil() { }
+
+        /// <summary>Konstruktor za JSON deserializaciju.</summary>
+        [JsonConstructor]
+        public Automobil(int idAutomobil, string model, string oprema, string tipGoriva, string boja, double cena)
+        {
+            this.IdAutomobil = idAutomobil;
+            this._model = model;
+            this._oprema = oprema;
+            this._tipGoriva = tipGoriva;
+            this._boja = boja;
+            this._cena = cena;
+        }
+
         /// <summary>
         /// Jedinstveni identifikator automobila. Primarni ključ u bazi podataka.
         /// </summary>
         public int IdAutomobil { get; set; }
 
         /// <summary>
-        /// Model automobila.
+        /// Model automobila. Ne sme biti prazan string ili null.
         /// </summary>
-        public string Model { get; set; }
+        /// <exception cref="ArgumentException">Baca se kada se pokuša postaviti prazan string, null ili string koji se sastoji samo od belina.</exception>
+        public string Model
+        {
+            get => _model;
+            set
+            {
+                if(!isLoading)
+                {
+                    if (string.IsNullOrWhiteSpace(value))
+                    {
+                        throw new ArgumentException("Model automobila ne sme biti prazan string.", nameof(Model));
+                    }
+                }
+                _model = value;
+            }
+        }
 
         /// <summary>
-        /// Opis opreme automobila.
+        /// Opis opreme automobila. Ne sme biti prazan string ili null.
         /// </summary>
-        public string Oprema { get; set; }
+        /// <exception cref="ArgumentException">Baca se kada se pokuša postaviti prazan string, null ili string koji se sastoji samo od belina.</exception>
+        public string Oprema 
+        {
+            get => _oprema;
+            set
+            {
+                if (!isLoading)
+                {
+                    if (string.IsNullOrWhiteSpace(value))
+                    {
+                        throw new ArgumentException("Oprema automobila ne sme biti prazan string.", nameof(Oprema));
+                    }
+                }
+                _oprema = value;
+            }
+        }
 
         /// <summary>
-        /// Tip goriva koje automobil koristi (benzin, dizel, električni).
+        /// Tip goriva koje automobil koristi. Ne sme biti prazan string ili null.
         /// </summary>
-        public string TipGoriva { get; set; }
+        /// <value>String koji označava vrstu goriva (npr. "benzin", "dizel", "električni").</value>
+        /// <exception cref="ArgumentException">Baca se kada se pokuša postaviti prazan string, null ili string koji se sastoji samo od belina.</exception>
+        public string TipGoriva
+        {
+            get => _tipGoriva;
+            set
+            {
+                if (!isLoading)
+                {
+                    if (string.IsNullOrWhiteSpace(value))
+                    {
+                        throw new ArgumentException("Tip goriva automobila ne sme biti prazan string.", nameof(TipGoriva));
+                    }
+                }
+                _tipGoriva = value;
+            }
+        }
 
         /// <summary>
-        /// Boja automobila.
+        /// Boja automobila. Ne sme biti prazan string ili null.
         /// </summary>
-        public string Boja { get; set; }
+        /// <value>String koji predstavlja boju automobila (npr. "crvena", "plava", "siva").</value>
+        /// <exception cref="ArgumentException">Baca se kada se pokuša postaviti prazan string, null ili string koji se sastoji samo od belina.</exception>
+        public string Boja
+        {
+            get => _boja;
+            set
+            {
+                if (!isLoading)
+                {
+                    if (string.IsNullOrWhiteSpace(value))
+                    {
+                        throw new ArgumentException("Boja automobila ne sme biti prazan string.", nameof(Boja));
+                    }
+                }
+                _boja = value;
+            }
+        }
 
         /// <summary>
-        /// Cena automobila.
+        /// Cena automobila. Ne sme biti negativan broj.
         /// </summary>
-        public double Cena { get; set; }
+        /// <value>Pozitivna decimalna vrednost koja predstavlja cenu automobila u valuti.</value>
+        /// <exception cref="ArgumentException">Baca se kada se pokuša postaviti negativna vrednost.</exception>
+        public double Cena
+        {
+            get => _cena;
+            set
+            {
+                if (!isLoading)
+                {
+                    if (value < 0)
+                    {
+                        throw new ArgumentException("Cena automobila ne sme biti negativna.", nameof(Cena));
+                    }
+                }
+                _cena = value;
+            }
+        }
 
         /// <inheritdoc/>
         public string TableName => "Automobil";
@@ -114,6 +215,7 @@ namespace Common.Domain
             {
                 automobili.Add(new Automobil
                 {
+                    isLoading = true,
                     IdAutomobil = Convert.ToInt32(reader["idAutomobil"]),
                     Model = reader["model"].ToString(),
                     Oprema = reader["oprema"].ToString(),
@@ -163,5 +265,6 @@ namespace Common.Domain
 
             return (whereClause, parameters);
         }
+
     }
 }

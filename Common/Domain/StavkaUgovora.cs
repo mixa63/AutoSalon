@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
+using System.Text.Json.Serialization;
 
 namespace Common.Domain
 {
@@ -13,35 +14,154 @@ namespace Common.Domain
     /// </summary>
     public class StavkaUgovora : IEntity
     {
-        /// <summary>
-        /// Ugovor kojem stavka pripada.
-        /// </summary>
-        public Ugovor Ugovor { get; set; }
+        private bool isLoading = false;
+        private Ugovor _ugovor;
+        private int _rb;
+        private Automobil _automobil;
+        private double _popust;
+        private double _cenaAutomobila;
+        private double _iznos;
+
+        /// <summary>Podrazumevani konstruktor.</summary>
+        public StavkaUgovora() { }
+
+        /// <summary>Konstruktor za JSON deserializaciju.</summary>
+        [JsonConstructor]
+        public StavkaUgovora(Ugovor ugovor, int rb, Automobil automobil, double popust, double cenaAutomobila, double iznos)
+        {
+            this._ugovor = ugovor;
+            this._rb = rb;
+            this._automobil = automobil;
+            this._popust = popust;
+            this._cenaAutomobila = cenaAutomobila;
+            this._iznos = iznos;
+        }
 
         /// <summary>
-        /// Redni broj stavke unutar ugovora.
+        /// Ugovor kojem stavka pripada. Ne sme biti null.
         /// </summary>
-        public int Rb { get; set; }
-     
-        /// <summary>
-        /// Referenca na automobil koji je predmet stavke.
-        /// </summary>
-        public Automobil Automobil { get; set; }
+        /// <value>Instanca klase <see cref="Ugovor"/> kojoj pripada stavka.</value>
+        /// <exception cref="ArgumentNullException">Baca se kada se pokuša postaviti null vrednost.</exception>
+        public Ugovor Ugovor
+        {
+            get => _ugovor;
+            set
+            {
+                if (!isLoading)
+                {
+                    if (value == null)
+                    {
+                        throw new ArgumentNullException(nameof(Ugovor), "Ugovor ne sme biti null.");
+                    }
+                }
+                _ugovor = value;
+            }
+        }
 
         /// <summary>
-        /// Popust na automobil koji je predmet stavke.
+        /// Redni broj stavke unutar ugovora. Mora biti veći od nule.
         /// </summary>
-        public double Popust { get; set; }
+        /// <value>Pozitivan ceo broj koji predstavlja redni broj stavke u okviru ugovora.</value>
+        /// <exception cref="ArgumentOutOfRangeException">Baca se kada se pokuša postaviti vrednost manja ili jednaka 0.</exception>
+        public int Rb
+        {
+            get => _rb;
+            set
+            {
+                if (!isLoading)
+                {
+                    if (value <= 0)
+                    {
+                        throw new ArgumentOutOfRangeException(nameof(Rb), "Redni broj stavke mora biti veći od nule.");
+                    }
+                }
+                _rb = value;
+            }
+        }
 
         /// <summary>
-        /// Cena automobila koji je predmet stavke.
+        /// Referenca na automobil koji je predmet stavke. Ne sme biti null.
         /// </summary>
-        public double CenaAutomobila { get; set; }
+        /// <value>Instanca klase <see cref="Automobil"/> koja predstavlja automobil u stavci ugovora.</value>
+        /// <exception cref="ArgumentNullException">Baca se kada se pokuša postaviti null vrednost.</exception>
+        public Automobil Automobil
+        {
+            get => _automobil;
+            set
+            {
+                if (!isLoading)
+                {
+                    if (value == null)
+                    {
+                        throw new ArgumentNullException(nameof(Automobil), "Automobil ne sme biti null.");
+                    }
+                }
+                _automobil = value;
+            }
+        }
 
         /// <summary>
-        /// Iznos stavke sa popustom.
+        /// Popust na automobil koji je predmet stavke. Mora biti između 0 i 1.
         /// </summary>
-        public double Iznos { get; set; }
+        /// <value>Decimalna vrednost između 0 i 1 koja predstavlja popust (npr. 0.1 za 10% popusta).</value>
+        /// <exception cref="ArgumentOutOfRangeException">Baca se kada se pokuša postaviti vrednost manja od 0 ili veća od 1.</exception>
+        public double Popust
+        {
+            get => _popust;
+            set
+            {
+                if (!isLoading)
+                {
+                    if (value < 0 || value > 1)
+                    {
+                        throw new ArgumentOutOfRangeException(nameof(Popust), "Popust mora biti između 0 i 1.");
+                    }
+                }
+                _popust = value;
+            }
+        }
+
+        /// <summary>
+        /// Cena automobila koji je predmet stavke. Mora biti nenegativna.
+        /// </summary>
+        /// <value>Pozitivna decimalna vrednost koja predstavlja cenu automobila pre popusta.</value>
+        /// <exception cref="ArgumentOutOfRangeException">Baca se kada se pokuša postaviti negativna vrednost.</exception>
+        public double CenaAutomobila
+        {
+            get => _cenaAutomobila;
+            set
+            {
+                if (!isLoading)
+                {
+                    if (value < 0)
+                    {
+                        throw new ArgumentOutOfRangeException(nameof(CenaAutomobila), "Cena automobila ne sme biti negativna.");
+                    }
+                }
+                _cenaAutomobila = value;
+            }
+        }
+
+        /// <summary>
+        /// Iznos stavke sa popustom. Mora biti nenegativan.
+        /// </summary>
+        /// <value>Pozitivna decimalna vrednost koja predstavlja konačan iznos stavke nakon primene popusta.</value>
+        /// <exception cref="ArgumentOutOfRangeException">Baca se kada se pokuša postaviti negativna vrednost.</exception>
+        public double Iznos
+        {
+            get => _iznos;
+            set
+            {
+                if (!isLoading)
+                {
+                    if (value < 0)
+                    {
+                        throw new ArgumentOutOfRangeException(nameof(Iznos), "Iznos stavke ne sme biti negativan.");
+                    }
+                }
+                _iznos = value;
+            }
+        }
 
         /// <inheritdoc/>
         public string TableName => "StavkaUgovora";
@@ -94,7 +214,6 @@ namespace Common.Domain
         public List<SqlParameter> GetUpdateParameters()
         {
             var parameters = GetInsertParameters();
-            parameters.Add(new SqlParameter("@idUgovor", SqlDbType.Int) { Value = Ugovor.IdUgovor });
             return parameters;
         }
 
@@ -116,6 +235,7 @@ namespace Common.Domain
             {
                 stavke.Add(new StavkaUgovora
                 {
+                    isLoading = true,
                     Ugovor = new Ugovor { IdUgovor = Convert.ToInt32(reader["idUgovor"]) },
                     Rb = Convert.ToInt32(reader["rb"]),
                     Automobil = new Automobil{ IdAutomobil = Convert.ToInt32(reader["idAutomobil"]) },

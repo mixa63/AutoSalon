@@ -10,6 +10,28 @@ namespace Tests.Common.Domain
     public class KupacTests
     {
         [Fact]
+        public void Email_SetWithValidValue_SetsProperty()
+        {
+            var kupac = new Kupac();
+            const string validEmail = "test@example.com";
+            kupac.Email = validEmail;
+            Assert.Equal(validEmail, kupac.Email);
+        }
+
+        [Theory]
+        [InlineData(null)]
+        [InlineData("")]
+        [InlineData("   ")]
+        [InlineData("test@example")]
+        [InlineData("testexample.com")]
+        [InlineData("test@.com")] 
+        public void Email_SetWithInvalidValue_ThrowsArgumentException(string invalidEmail)
+        {
+            var kupac = new Kupac();
+            Assert.Throws<ArgumentException>(() => kupac.Email = invalidEmail);
+        }
+
+        [Fact]
         public void GetInsertParameters_ShouldReturnCorrectParameters()
         {
             var kupac = new Kupac { Email = "pera@example.com" };
@@ -51,11 +73,7 @@ namespace Tests.Common.Domain
         public void GetWhereClauseWithParameters_VariousInputs_ShouldGenerateCorrectClause(
             int idKupac, string email, string expectedCondition, int expectedParamCount)
         {
-            var kupac = new Kupac
-            {
-                IdKupac = idKupac,
-                Email = email
-            };
+            var kupac = new Kupac(idKupac, email);
 
             var (where, parameters) = kupac.GetWhereClauseWithParameters();
 
