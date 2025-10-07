@@ -11,6 +11,63 @@ namespace Tests.Common.Domain
     public class PravnoLiceTests
     {
         [Fact]
+        public void NazivFirme_SetWithValidValue_SetsProperty()
+        {
+            var pravnoLice = new PravnoLice();
+            const string validNaziv = "Firma d.o.o.";
+            pravnoLice.NazivFirme = validNaziv;
+            Assert.Equal(validNaziv, pravnoLice.NazivFirme);
+        }
+
+        [Theory]
+        [InlineData(null)]
+        [InlineData("")]
+        [InlineData("   ")]
+        public void NazivFirme_SetWithInvalidValue_ThrowsArgumentException(string invalidNaziv)
+        {
+            var pravnoLice = new PravnoLice();
+            Assert.Throws<ArgumentException>(() => pravnoLice.NazivFirme = invalidNaziv);
+        }
+
+        [Fact]
+        public void PIB_SetWithValidValue_SetsProperty()
+        {
+            var pravnoLice = new PravnoLice();
+            const string validPIB = "123456789";
+            pravnoLice.PIB = validPIB;
+            Assert.Equal(validPIB, pravnoLice.PIB);
+        }
+
+        [Theory]
+        [InlineData(null)]
+        [InlineData("")]
+        [InlineData("   ")]
+        public void PIB_SetWithInvalidValue_ThrowsArgumentException(string invalidPIB)
+        {
+            var pravnoLice = new PravnoLice();
+            Assert.Throws<ArgumentException>(() => pravnoLice.PIB = invalidPIB);
+        }
+
+        [Fact]
+        public void MaticniBroj_SetWithValidValue_SetsProperty()
+        {
+            var pravnoLice = new PravnoLice();
+            const string validMaticniBroj = "98765432";
+            pravnoLice.MaticniBroj = validMaticniBroj;
+            Assert.Equal(validMaticniBroj, pravnoLice.MaticniBroj);
+        }
+
+        [Theory]
+        [InlineData(null)]
+        [InlineData("")]
+        [InlineData("   ")]
+        public void MaticniBroj_SetWithInvalidValue_ThrowsArgumentException(string invalidMaticniBroj)
+        {
+            var pravnoLice = new PravnoLice();
+            Assert.Throws<ArgumentException>(() => pravnoLice.MaticniBroj = invalidMaticniBroj);
+        }
+
+        [Fact]
         public void GetInsertParameters_ShouldReturnCorrectParameters()
         {
             var pl = new PravnoLice
@@ -122,13 +179,7 @@ namespace Tests.Common.Domain
         [InlineData(0, "", "", "", "1=1", 0)]
         public void GetWhereClauseWithParameters_ShouldBuildCorrectClause(int idKupac, string nazivFirme, string pib, string maticniBroj, string expectedClause, int expectedParamCount)
         {
-            var pl = new PravnoLice
-            {
-                IdKupac = idKupac,
-                NazivFirme = nazivFirme,
-                PIB = pib,
-                MaticniBroj = maticniBroj
-            };
+            var pl = new PravnoLice(idKupac, null, nazivFirme, pib, maticniBroj);
 
             var (whereClause, parameters) = pl.GetWhereClauseWithParameters();
              

@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
+using System.Text.Json.Serialization;
 
 namespace Common.Domain
 {
@@ -12,20 +13,83 @@ namespace Common.Domain
     /// </summary>
     public class PravnoLice : Kupac
     {
+        private bool isLoading = false;
+        private string _nazivFirme;
+        private string _pib;
+        private string _maticniBroj;
+
+        /// <summary>Podrazumevani konstruktor.</summary>
+        public PravnoLice() { }
+
+        /// <summary>Konstruktor za JSON deserializaciju.</summary>
+        [JsonConstructor]
+        public PravnoLice(int idKupac, string email, string nazivFirme, string pib, string maticniBroj) : base(idKupac, email)
+        {
+            this._nazivFirme = nazivFirme;
+            this._pib = pib;
+            this._maticniBroj = maticniBroj;
+        }
         /// <summary>
-        /// Naziv firme.
+        /// Naziv firme. Ne sme biti prazan string ili null.
         /// </summary>
-        public string NazivFirme { get; set; }
+        /// <exception cref="ArgumentException">Baca se kada se pokuša postaviti prazan string, null ili string koji se sastoji samo od belina.</exception>
+        public string NazivFirme
+        {
+            get => _nazivFirme;
+            set
+            {
+                if (!isLoading)
+                {
+                    if (string.IsNullOrWhiteSpace(value))
+                    {
+                        throw new ArgumentException("Naziv firme ne sme biti prazan string.", nameof(NazivFirme));
+                    }
+                }
+                _nazivFirme = value;
+            }
+        }
 
         /// <summary>
-        /// PIB firme.
+        /// PIB firme. Ne sme biti prazan string ili null.
         /// </summary>
-        public String PIB { get; set; }
+        /// <value>String koji predstavlja Poreski identifikacioni broj firme.</value>
+        /// <exception cref="ArgumentException">Baca se kada se pokuša postaviti prazan string, null ili string koji se sastoji samo od belina.</exception>
+        public String PIB
+        {
+            get => _pib;
+            set
+            {
+                if (!isLoading)
+                {
+                    if (string.IsNullOrWhiteSpace(value))
+                    {
+                        throw new ArgumentException("PIB ne sme biti prazan string.", nameof(PIB));
+                    }
+                }
+                _pib = value;
+            }
+        }
 
         /// <summary>
-        /// Matični broj firme.
+        /// Matični broj firme. Ne sme biti prazan string ili null.
         /// </summary>
-        public string MaticniBroj { get; set; }
+        /// <value>String koji predstavlja matični broj firme prema registru.</value>
+        /// <exception cref="ArgumentException">Baca se kada se pokuša postaviti prazan string, null ili string koji se sastoji samo od belina.</exception>
+        public string MaticniBroj
+        {
+            get => _maticniBroj;
+            set
+            {
+                if (!isLoading)
+                {
+                    if (string.IsNullOrWhiteSpace(value))
+                    {
+                        throw new ArgumentException("Maticni broj ne sme biti prazan string.", nameof(MaticniBroj));
+                    }
+                }
+                _maticniBroj = value;
+            }
+        }
 
         /// <inheritdoc/>
         public override string TableName => "PravnoLice";
@@ -96,6 +160,7 @@ namespace Common.Domain
             {
                 pravnaLica.Add(new PravnoLice
                 {
+                    isLoading = true,
                     IdKupac = Convert.ToInt32(reader["idKupac"]),
                     Email = reader["email"].ToString(),
                     NazivFirme = reader["nazivFirme"].ToString(),
