@@ -39,7 +39,7 @@ namespace ServerApp.SystemOperations.KupacSO
         /// </remarks>
         protected override void ExecuteConcreteOperation()
         {
-            Kupac noviKupac = new Kupac { Email = "" };
+            Kupac noviKupac = new Kupac(0, "");
             noviKupac.IdKupac = broker.AddWithReturnId(noviKupac);
             Result = noviKupac;
         }

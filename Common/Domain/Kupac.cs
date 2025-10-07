@@ -3,6 +3,8 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
+using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
 
 namespace Common.Domain
 {
@@ -13,15 +15,53 @@ namespace Common.Domain
     /// </summary>
     public class Kupac : IEntity
     {
+        private bool isLoading = false;
+        private string _email;
+
+        /// <summary>Podrazumevani konstruktor.</summary>
+        public Kupac() { }
+
+        /// <summary>Konstruktor za JSON deserializaciju.</summary>
+        [JsonConstructor]
+        public Kupac(int idKupac, string email)
+        {
+            this.IdKupac = idKupac;
+            this._email = email;
+        }
+
         /// <summary>
         /// Jedinstveni identifikator kupca. Primarni ključ.
         /// </summary>
         public int IdKupac { get; set; }
 
         /// <summary>
-        /// Email adresa kupca.
+        /// Email adresa kupca. Ne sme biti prazna ili null i mora biti u ispravnom formatu.
         /// </summary>
-        public string Email { get; set; }
+        /// <value>String koji predstavlja email adresu u validnom formatu (npr. "ime@domen.rs").</value>
+        /// <exception cref="ArgumentException">Baca se u sledećim slučajevima:
+        /// - Kada se pokuša postaviti prazan string ili null
+        /// - Kada email adresa nije u validnom formatu (nedostaje @ simbol ili domen)</exception>
+        public string Email
+        {
+            get => _email;
+            set
+            {
+                if (!isLoading)
+                {
+                    if (string.IsNullOrWhiteSpace(value))
+                    {
+                        throw new ArgumentException("Email adresa kupca ne sme biti prazna.", nameof(Email));
+                    }
+
+                    // NOVA PROVERA: Validacija formata
+                    if (!Regex.IsMatch(value, @"^[^@\s]+@[^@\s]+\.[^@\s]+$"))
+                    {
+                        throw new ArgumentException("Email adresa nije u ispravnom formatu.", nameof(Email));
+                    }
+                }
+                _email = value;
+            }
+        }
 
         /// <inheritdoc/>
         public virtual string TableName => "Kupac";
@@ -84,6 +124,7 @@ namespace Common.Domain
             {
                 kupci.Add(new Kupac
                 {
+                    isLoading = true,
                     IdKupac = Convert.ToInt32(reader["idKupac"]),
                     Email = reader["email"].ToString()
                 });
