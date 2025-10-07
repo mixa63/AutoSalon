@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
+using System.Text.Json.Serialization;
 
 namespace Common.Domain
 {
@@ -12,50 +13,206 @@ namespace Common.Domain
     /// </summary>
     public class Ugovor : IEntity
     {
+        private bool isLoading = false;
+        private DateTime _datum;
+        private int _brAutomobila;
+        private double _pdv;
+        private double _iznosBezPDV;
+        private double _iznosSaPDV;
+        private Prodavac _prodavac;
+        private Kupac _kupac;
+        private List<StavkaUgovora> _stavke = new();
+
+        /// <summary>Podrazumevani konstruktor.</summary>
+        public Ugovor() { }
+
+        /// <summary>Konstruktor za JSON deserializaciju.</summary>
+        [JsonConstructor]
+        public Ugovor(int idUgovor, DateTime datum, int brAutomobila, double pdv, double iznosBezPDV, double iznosSaPDV, Prodavac prodavac, Kupac kupac, List<StavkaUgovora> stavke)
+        {
+            this.IdUgovor = idUgovor;
+            this._datum = datum;
+            this._brAutomobila = brAutomobila;
+            this._pdv = pdv;
+            this._iznosBezPDV = iznosBezPDV;
+            this._iznosSaPDV = iznosSaPDV;
+            this._prodavac = prodavac;
+            this._kupac = kupac;
+            this._stavke = stavke ?? new List<StavkaUgovora>();
+        }
+
         /// <summary>
         /// Jedinstveni identifikator ugovora. Primarni ključ.
         /// </summary>
         public int IdUgovor { get; set; }
 
         /// <summary>
-        /// Datum sklapanja ugovora.
+        /// Datum sklapanja ugovora. Ne sme biti podrazumevana vrednost (DateTime.MinValue).
         /// </summary>
-        public DateTime Datum { get; set; }
+        /// <value>Datum kada je ugovor sklopljen. Mora biti validan datum.</value>
+        /// <exception cref="ArgumentOutOfRangeException">Baca se kada se pokuša postaviti DateTime.MinValue ili drugi nevalidan datum.</exception>
+        public DateTime Datum
+        {
+            get => _datum;
+            set
+            {
+                if (!isLoading)
+                {
+                    if (value == DateTime.MinValue)
+                    {
+                        throw new ArgumentOutOfRangeException(nameof(Datum), "Datum ugovora mora biti validan datum.");
+                    }
+                }
+                _datum = value;
+            }
+        }
 
         /// <summary>
-        /// Broj automobila uključenih u ugovor.
+        /// Broj automobila uključenih u ugovor. Mora biti veći od nule.
         /// </summary>
-        public int BrAutomobila { get; set; }
+        /// <value>Pozitivan ceo broj koji predstavlja ukupan broj automobila u ugovoru.</value>
+        /// <exception cref="ArgumentOutOfRangeException">Baca se kada se pokuša postaviti vrednost manja ili jednaka 0.</exception>
+        public int BrAutomobila
+        {
+            get => _brAutomobila;
+            set
+            {
+                if (!isLoading)
+                {
+                    if (value <= 0)
+                    {
+                        throw new ArgumentOutOfRangeException(nameof(BrAutomobila), "Broj automobila mora biti veći od nule.");
+                    }
+                }
+                _brAutomobila = value;
+            }
+        }
 
         /// <summary>
-        /// PDV.
+        /// PDV. Mora biti nenegativan.
         /// </summary>
-        public double PDV { get; set; }
+        /// <value>Decimalna vrednost koja predstavlja stopu PDV-a (npr. 0.2 za 20%).</value>
+        /// <exception cref="ArgumentOutOfRangeException">Baca se kada se pokuša postaviti negativna vrednost.</exception>
+        public double PDV
+        {
+            get => _pdv;
+            set
+            {
+                if (!isLoading)
+                {
+                    if (value < 0)
+                    {
+                        throw new ArgumentOutOfRangeException(nameof(PDV), "PDV ne sme biti negativan.");
+                    }
+                }
+                _pdv = value;
+            }
+        }
 
         /// <summary>
-        /// Ukupan iznos bez PDV-a.
+        /// Ukupan iznos bez PDV-a. Mora biti nenegativan.
         /// </summary>
-        public double IznosBezPDV { get; set; }
+        /// <value>Pozitivna decimalna vrednost koja predstavlja ukupan iznos ugovora bez PDV-a.</value>
+        /// <exception cref="ArgumentOutOfRangeException">Baca se kada se pokuša postaviti negativna vrednost.</exception>
+        public double IznosBezPDV
+        {
+            get => _iznosBezPDV;
+            set
+            {
+                if (!isLoading)
+                {
+                    if (value < 0)
+                    {
+                        throw new ArgumentOutOfRangeException(nameof(IznosBezPDV), "Iznos bez PDV-a ne sme biti negativan.");
+                    }
+                }
+                _iznosBezPDV = value;
+            }
+        }
 
         /// <summary>
-        /// Ukupan iznos sa PDV-om.
+        /// Ukupan iznos sa PDV-om. Mora biti nenegativan.
         /// </summary>
-        public double IznosSaPDV { get; set; }
+        /// <value>Pozitivna decimalna vrednost koja predstavlja ukupan iznos ugovora sa uračunatim PDV-om.</value>
+        /// <exception cref="ArgumentOutOfRangeException">Baca se kada se pokuša postaviti negativna vrednost.</exception>
+        public double IznosSaPDV
+        {
+            get => _iznosSaPDV;
+            set
+            {
+                if (!isLoading)
+                {
+                    if (value < 0)
+                    {
+                        throw new ArgumentOutOfRangeException(nameof(IznosSaPDV), "Iznos sa PDV-om ne sme biti negativan.");
+                    }
+                }
+                _iznosSaPDV = value;
+            }
+        }
 
         /// <summary>
-        /// Prodavac koji sklapa ugovor.
+        /// Prodavac koji sklapa ugovor. Ne sme biti null.
         /// </summary>
-        public Prodavac Prodavac { get; set; }
+        /// <value>Instanca klase <see cref="Prodavac"/> koja predstavlja prodavca koji je sklopio ugovor.</value>
+        /// <exception cref="ArgumentNullException">Baca se kada se pokuša postaviti null vrednost.</exception>
+        public Prodavac Prodavac
+        {
+            get => _prodavac;
+            set
+            {
+                if (!isLoading)
+                {
+                    if (value == null)
+                    {
+                        throw new ArgumentNullException(nameof(Prodavac), "Prodavac ne sme biti null.");
+                    }
+                }
+                _prodavac = value;
+            }
+        }
 
         /// <summary>
-        /// Kupac koji sklapa ugovor.
+        /// Kupac koji sklapa ugovor. Ne sme biti null.
         /// </summary>
-        public Kupac Kupac { get; set; }
+        /// <value>Instanca klase <see cref="Kupac"/> koja predstavlja kupca koji je sklopio ugovor.</value>
+        /// <exception cref="ArgumentNullException">Baca se kada se pokuša postaviti null vrednost.</exception>
+        public Kupac Kupac
+        {
+            get => _kupac;
+            set
+            {
+                if (!isLoading)
+                {
+                    if (value == null)
+                    {
+                        throw new ArgumentNullException(nameof(Kupac), "Kupac ne sme biti null.");
+                    }
+                }
+                _kupac = value;
+            }
+        }
 
         /// <summary>
-        /// Stavke ugovora koje predstavljaju automobile.
+        /// Stavke ugovora koje predstavljaju automobile. Ne sme biti null.
         /// </summary>
-        public List<StavkaUgovora> Stavke { get; set; } = new();
+        /// <value>Lista instanci klase <see cref="StavkaUgovora"/> koje predstavljaju pojedinačne stavke ugovora.</value>
+        /// <exception cref="ArgumentNullException">Baca se kada se pokuša postaviti null vrednost.</exception>
+        public List<StavkaUgovora> Stavke
+        {
+            get => _stavke;
+            set
+            {
+                if (!isLoading)
+                {
+                    if (value == null)
+                    {
+                        throw new ArgumentNullException(nameof(Stavke), "Lista stavki ne sme biti null.");
+                    }
+                }
+                _stavke = value;
+            }
+        }
 
         /// <inheritdoc/>
         public string TableName => "Ugovor";
@@ -140,6 +297,7 @@ namespace Common.Domain
                 {
                     ugovoriDict[idUgovor] = new Ugovor
                     {
+                        isLoading = true,
                         IdUgovor = idUgovor,
                         Datum = Convert.ToDateTime(reader["datum"]),
                         BrAutomobila = Convert.ToInt32(reader["brAutomobila"]),
