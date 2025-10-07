@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
+using System.Text.Json.Serialization;
 
 namespace Common.Domain
 {
@@ -13,20 +14,85 @@ namespace Common.Domain
     /// </summary>
     public class PrKvalifikacija : IEntity
     {
-        /// <summary>
-        /// Prodavac koji poseduje kvalifikaciju.
-        /// </summary>
-        public Prodavac Prodavac { get; set; }
+        private bool isLoading = false;
+        private Prodavac _prodavac;
+        private Kvalifikacija _kvalifikacija;
+        private DateTime _datumIzdavanja;
+
+        /// <summary>Podrazumevani konstruktor.</summary>
+        public PrKvalifikacija() { }
+
+        /// <summary>Konstruktor za JSON deserializaciju.</summary>
+        [JsonConstructor]
+        public PrKvalifikacija(Prodavac prodavac, Kvalifikacija kvalifikacija, DateTime datumIzdavanja)
+        {
+            this._prodavac = prodavac;
+            this._kvalifikacija = kvalifikacija;
+            this._datumIzdavanja = datumIzdavanja;
+        }
 
         /// <summary>
-        /// Kvalifikacija koju prodavac poseduje.
+        /// Prodavac koji poseduje kvalifikaciju. Ne sme biti null.
         /// </summary>
-        public Kvalifikacija Kvalifikacija { get; set; }
+        /// <value>Instanca klase <see cref="Prodavac"/> koja predstavlja prodavca kojem je dodeljena kvalifikacija.</value>
+        /// <exception cref="ArgumentNullException">Baca se kada se pokuša postaviti null vrednost.</exception>
+        public Prodavac Prodavac
+        {
+            get => _prodavac;
+            set
+            {
+                if (!isLoading)
+                {
+                    if (value == null)
+                    {
+                        throw new ArgumentNullException(nameof(Prodavac), "Prodavac ne sme biti null.");
+                    }
+                }
+                _prodavac = value;
+            }
+        }
 
         /// <summary>
-        /// Datum izdavanja kvalifikacije prodavcu.
+        /// Kvalifikacija koju prodavac poseduje. Ne sme biti null.
         /// </summary>
-        public DateTime DatumIzdavanja { get; set; }
+        /// <value>Instanca klase <see cref="Kvalifikacija"/> koja predstavlja kvalifikaciju dodeljenu prodavcu.</value>
+        /// <exception cref="ArgumentNullException">Baca se kada se pokuša postaviti null vrednost.</exception>
+        public Kvalifikacija Kvalifikacija
+        {
+            get => _kvalifikacija;
+            set
+            {
+                if (!isLoading)
+                {
+                    if (value == null)
+                    {
+                        throw new ArgumentNullException(nameof(Kvalifikacija), "Kvalifikacija ne sme biti null.");
+                    }
+                }
+                _kvalifikacija = value;
+            }
+        }
+
+        /// <summary>
+        /// Datum izdavanja kvalifikacije prodavcu. Ne sme biti podrazumevana vrednost (DateTime.MinValue).
+        /// </summary>
+        /// <value>Datum kada je kvalifikacija izdata prodavcu. Mora biti validan datum.</value>
+        /// <exception cref="ArgumentOutOfRangeException">Baca se kada se pokuša postaviti DateTime.MinValue ili drugi nevalidan datum.</exception>
+        public DateTime DatumIzdavanja
+        {
+            get => _datumIzdavanja;
+            set
+            {
+                if (!isLoading)
+                {
+                    if (value == DateTime.MinValue)
+                    {
+                        throw new ArgumentOutOfRangeException(nameof(DatumIzdavanja), "Datum izdavanja mora biti validan datum.");
+                    }
+                }
+                _datumIzdavanja = value;
+            }
+        }
 
         /// <inheritdoc/>
         public string TableName => "PrKvalifikacija";
@@ -94,6 +160,7 @@ namespace Common.Domain
             {
                 list.Add(new PrKvalifikacija
                 {
+                    isLoading = true,
                     Prodavac = new Prodavac { IdProdavac = Convert.ToInt32(reader["idProdavac"]) },
                     Kvalifikacija = new Kvalifikacija { IdKvalifikacija = Convert.ToInt32(reader["idKvalifikacija"]) },
                     DatumIzdavanja = Convert.ToDateTime(reader["datumIzdavanja"])

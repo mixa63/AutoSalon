@@ -12,6 +12,54 @@ namespace Tests.Common.Domain
     public class PrKvalifikacijaTests
     {
         [Fact]
+        public void Prodavac_SetWithValidValue_SetsProperty()
+        {
+            var prKvalifikacija = new PrKvalifikacija();
+            var validProdavac = new Prodavac();
+            prKvalifikacija.Prodavac = validProdavac;
+            Assert.Equal(validProdavac, prKvalifikacija.Prodavac);
+        }
+
+        [Fact]
+        public void Prodavac_SetWithNull_ThrowsArgumentNullException()
+        {
+            var prKvalifikacija = new PrKvalifikacija();
+            Assert.Throws<ArgumentNullException>(() => prKvalifikacija.Prodavac = null);
+        }
+
+        [Fact]
+        public void Kvalifikacija_SetWithValidValue_SetsProperty()
+        {
+            var prKvalifikacija = new PrKvalifikacija();
+            var validKvalifikacija = new Kvalifikacija();
+            prKvalifikacija.Kvalifikacija = validKvalifikacija;
+            Assert.Equal(validKvalifikacija, prKvalifikacija.Kvalifikacija);
+        }
+
+        [Fact]
+        public void Kvalifikacija_SetWithNull_ThrowsArgumentNullException()
+        {
+            var prKvalifikacija = new PrKvalifikacija();
+            Assert.Throws<ArgumentNullException>(() => prKvalifikacija.Kvalifikacija = null);
+        }
+
+        [Fact]
+        public void DatumIzdavanja_SetWithValidValue_SetsProperty()
+        {
+            var prKvalifikacija = new PrKvalifikacija();
+            var validDatum = DateTime.Now;
+            prKvalifikacija.DatumIzdavanja = validDatum;
+            Assert.Equal(validDatum, prKvalifikacija.DatumIzdavanja);
+        }
+
+        [Fact]
+        public void DatumIzdavanja_SetWithMinValue_ThrowsArgumentOutOfRangeException()
+        {
+            var prKvalifikacija = new PrKvalifikacija();
+            Assert.Throws<ArgumentOutOfRangeException>(() => prKvalifikacija.DatumIzdavanja = DateTime.MinValue);
+        }
+
+        [Fact]
         public void GetInsertParameters_ShouldReturnCorrectParameters()
         {
             var prk = new PrKvalifikacija
@@ -110,11 +158,11 @@ namespace Tests.Common.Domain
         public void GetWhereClauseWithParameters_ShouldBuildCorrectClause(int idProdavac, int idKvalifikacija, string datum, string expectedClause, int expectedParamCount)
         {
             var prk = new PrKvalifikacija
-            {
-                Prodavac = new Prodavac { IdProdavac = idProdavac },
-                Kvalifikacija = new Kvalifikacija { IdKvalifikacija = idKvalifikacija },
-                DatumIzdavanja = DateTime.Parse(datum)
-            };
+            (
+                new Prodavac(idProdavac,null,null,null,null),
+                new Kvalifikacija(idKvalifikacija, null, null),
+                DateTime.Parse(datum)
+            );
 
             var (whereClause, parameters) = prk.GetWhereClauseWithParameters();
 
